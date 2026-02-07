@@ -1,0 +1,21 @@
+[Bb]uild/
+.idea/
+javadoc/
+docs/source/casual-docs/
+docs/source/version
+.qodo/
+*.iml
+*.class
+*.jar
+.gradle/
+# emacs #
+*~
+*.orig
+dist/
+out/
+gradle.properties
+secret.*
+__pycache__/
+AGENTS.md
+cmake-build-debug/
+.cache

@@ -1,0 +1,26 @@
+# Test executable target
+add_executable(test_main
+    test_main.cpp
+)
+
+# Find Catch2 from Conan
+find_package(Catch2 REQUIRED)
+
+# Link Catch2
+target_link_libraries(test_main PRIVATE Catch2::Catch2WithMain)
+
+# Enable testing
+enable_testing()
+
+# Add test
+add_test(NAME breakout_unit_tests COMMAND test_main)
+
+# Run tests automatically when test_main is built
+add_custom_command(
+    TARGET test_main
+    POST_BUILD
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running unit tests after building test_main..."
+    VERBATIM
+)
