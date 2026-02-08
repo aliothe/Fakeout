@@ -9,7 +9,7 @@ class SDLWindow
 {
 private:
   SDL_Window *window_{nullptr};
-  SDL_GLContext context_{nullptr};
+  SDL_Renderer *renderer_{nullptr};
   bool should_close_{false};
 
 public:
@@ -22,9 +22,10 @@ public:
   SDLWindow(SDLWindow &&other) noexcept;
   SDLWindow &operator=(SDLWindow &&other) noexcept;
 
-  void swap_buffers() const;
+  void present() const;
   [[nodiscard]] bool should_close() const;
   void handle_events();
+  [[nodiscard]] SDL_Renderer *get_renderer() const;
 
 private:
   void cleanup() noexcept;

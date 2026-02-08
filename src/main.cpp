@@ -9,7 +9,7 @@
 #include "systems/particle_system.hpp"
 #include "systems/render_system.hpp"
 #include "texture_manager.hpp"
-#include <SDL3/SDL_opengl.h>
+#include <SDL3/SDL.h>
 #include <array>
 #include <chrono>
 #include <cstdlib>
@@ -34,8 +34,8 @@ Entity create_paddle(Registry &registry, breakout::TextureManager &texture_manag
 {
   auto paddle = registry.create_entity();
 
-  GLuint texture_id = texture_manager.create_paddle_texture(breakout::PADDLE_TEXTURE_WIDTH,
-                                                            breakout::PADDLE_TEXTURE_HEIGHT);
+  SDL_Texture *texture = texture_manager.create_paddle_texture(breakout::PADDLE_TEXTURE_WIDTH,
+                                                               breakout::PADDLE_TEXTURE_HEIGHT);
 
   registry.add_component<TransformComponent>(
       paddle, TransformComponent{{breakout::PADDLE_CENTER_X, breakout::PADDLE_CENTER_Y},
@@ -43,7 +43,7 @@ Entity create_paddle(Registry &registry, breakout::TextureManager &texture_manag
                                  breakout::PADDLE_HEIGHT});
 
   registry.add_component<SpriteComponent>(
-      paddle, SpriteComponent{texture_id,
+      paddle, SpriteComponent{texture,
                               {breakout::DEFAULT_TINT[0], breakout::DEFAULT_TINT[1],
                                breakout::DEFAULT_TINT[2], breakout::DEFAULT_TINT[3]}});
 
@@ -60,7 +60,7 @@ Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager
 {
   auto ball = registry.create_entity();
 
-  GLuint texture_id =
+  SDL_Texture *texture =
       texture_manager.create_ball_texture(breakout::BALL_TEXTURE_SIZE, breakout::BALL_TEXTURE_SIZE);
 
   // Start ball in center, moving down at an angle
@@ -70,7 +70,7 @@ Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager
                                breakout::BALL_SIZE});
 
   registry.add_component<SpriteComponent>(
-      ball, SpriteComponent{texture_id,
+      ball, SpriteComponent{texture,
                             {breakout::DEFAULT_TINT[0], breakout::DEFAULT_TINT[1],
                              breakout::DEFAULT_TINT[2], breakout::DEFAULT_TINT[3]}});
 
@@ -87,13 +87,13 @@ Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager
 void create_brick_wall(Registry &registry, breakout::TextureManager &texture_manager)
 {
   // Pre-generate textures for each brick type
-  GLuint red_id = texture_manager.create_brick_texture(
+  SDL_Texture *red_texture = texture_manager.create_brick_texture(
       breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_RED_R,
       breakout::BRICK_RED_G, breakout::BRICK_RED_B);
-  GLuint yellow_id = texture_manager.create_brick_texture(
+  SDL_Texture *yellow_texture = texture_manager.create_brick_texture(
       breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_YELLOW_R,
       breakout::BRICK_YELLOW_G, breakout::BRICK_YELLOW_B);
-  GLuint blue_id = texture_manager.create_brick_texture(
+  SDL_Texture *blue_texture = texture_manager.create_brick_texture(
       breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_BLUE_R,
       breakout::BRICK_BLUE_G, breakout::BRICK_BLUE_B);
 
@@ -134,33 +134,33 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
 
       // Determine brick properties based on weighted random selection
       int hit_points = 0;
-      GLuint texture_id = 0;
+      SDL_Texture *texture = nullptr;
       BrickColor color = BrickColor::BLUE;
 
       if (brick_type == 1)
       {
         // Red bricks (3 hits) - 10% probability
         hit_points = 3;
-        texture_id = red_id;
+        texture = red_texture;
         color = BrickColor::RED;
       }
       else if (brick_type == 2)
       {
         // Yellow bricks (2 hits) - 20% probability
         hit_points = 2;
-        texture_id = yellow_id;
+        texture = yellow_texture;
         color = BrickColor::YELLOW;
       }
       else
       {
         // Blue bricks (1 hit) - 30% probability
         hit_points = 1;
-        texture_id = blue_id;
+        texture = blue_texture;
         color = BrickColor::BLUE;
       }
 
       registry.add_component<SpriteComponent>(
-          brick, SpriteComponent{texture_id,
+          brick, SpriteComponent{texture,
                                  {breakout::DEFAULT_TINT[0], breakout::DEFAULT_TINT[1],
                                   breakout::DEFAULT_TINT[2], breakout::DEFAULT_TINT[3]}});
       registry.add_component<BrickComponent>(brick, BrickComponent{hit_points, color});
@@ -184,21 +184,20 @@ int main()
     SDLWindow window("Breakout - Move paddle to bounce ball", breakout::WINDOW_WIDTH,
                      breakout::WINDOW_HEIGHT);
 
+    SDL_Renderer *renderer = window.get_renderer();
+
     Registry registry;
-    breakout::TextureManager texture_manager;
+    breakout::TextureManager texture_manager(renderer);
     breakout::SoundManager sound_manager;
     breakout::systems::ParticleSystem particle_system;
     breakout::systems::BallPhysicsSystem ball_physics_system(sound_manager, particle_system);
     breakout::systems::InputSystem input_system;
     breakout::systems::MovementSystem movement_system;
-    breakout::systems::RenderSystem render_system;
+    breakout::systems::RenderSystem render_system(renderer);
 
     create_paddle(registry, texture_manager);
     create_ball(registry, texture_manager);
     create_brick_wall(registry, texture_manager);
-
-    render_system.setup_ortho_projection(0.0F, static_cast<float>(breakout::WINDOW_WIDTH),
-                                         static_cast<float>(breakout::WINDOW_HEIGHT), 0.0F);
 
     auto last_time = std::chrono::steady_clock::now();
 
@@ -215,13 +214,18 @@ int main()
                                  static_cast<float>(breakout::WINDOW_HEIGHT));
       particle_system.update(registry, delta_time);
 
-      glClearColor(breakout::CLEAR_COLOR[0], breakout::CLEAR_COLOR[1], breakout::CLEAR_COLOR[2],
-                   breakout::CLEAR_COLOR[3]);
-      glClear(GL_COLOR_BUFFER_BIT);
+      // Clear screen with background color
+      SDL_SetRenderDrawColor(
+          renderer,
+          static_cast<std::uint8_t>(breakout::CLEAR_COLOR_R * breakout::COLOR_MAX_BYTE_FLOAT),
+          static_cast<std::uint8_t>(breakout::CLEAR_COLOR_G * breakout::COLOR_MAX_BYTE_FLOAT),
+          static_cast<std::uint8_t>(breakout::CLEAR_COLOR_B * breakout::COLOR_MAX_BYTE_FLOAT),
+          static_cast<std::uint8_t>(breakout::CLEAR_COLOR_A * breakout::COLOR_MAX_BYTE_FLOAT));
+      SDL_RenderClear(renderer);
 
       render_system.render(registry);
 
-      window.swap_buffers();
+      window.present();
     }
 
     std::cout << "Window closed successfully.\n";

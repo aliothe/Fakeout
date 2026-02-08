@@ -77,6 +77,11 @@ constexpr std::array<float, 2> ZERO_VELOCITY{0.0F, 0.0F};
 // Halving factor for centering calculations
 constexpr float HALF_FACTOR = 2.0F;
 
+// Color conversion factor (for converting 0.0-1.0 float to 0-255 uint8)
+constexpr float COLOR_MAX_FLOAT = 1.0F;
+constexpr float COLOR_MAX_BYTE_FLOAT = 255.0F;
+constexpr std::uint8_t COLOR_MAX_BYTE = 255;
+
 } // namespace constants
 
 } // namespace breakout

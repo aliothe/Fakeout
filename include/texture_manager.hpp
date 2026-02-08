@@ -1,11 +1,11 @@
 #pragma once
 
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_opengl.h>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -17,7 +17,7 @@ class Texture
 {
 public:
   Texture() = default;
-  explicit Texture(GLuint id) : id_{id}
+  explicit Texture(SDL_Texture *texture) : texture_{texture}
   {
   }
   ~Texture()
@@ -28,9 +28,9 @@ public:
   Texture(const Texture &) = delete;
   Texture &operator=(const Texture &) = delete;
 
-  Texture(Texture &&other) noexcept : id_{other.id_}
+  Texture(Texture &&other) noexcept : texture_{other.texture_}
   {
-    other.id_ = 0;
+    other.texture_ = nullptr;
   }
 
   Texture &operator=(Texture &&other) noexcept
@@ -38,67 +38,70 @@ public:
     if (this != &other)
     {
       cleanup();
-      id_ = other.id_;
-      other.id_ = 0;
+      texture_ = other.texture_;
+      other.texture_ = nullptr;
     }
     return *this;
   }
 
-  [[nodiscard]] GLuint id() const
+  [[nodiscard]] SDL_Texture *get() const
   {
-    return id_;
+    return texture_;
   }
   [[nodiscard]] bool valid() const
   {
-    return id_ != 0;
+    return texture_ != nullptr;
   }
 
 private:
   void cleanup() noexcept
   {
-    if (id_ != 0)
+    if (texture_ != nullptr)
     {
-      glDeleteTextures(1, &id_);
-      id_ = 0;
+      SDL_DestroyTexture(texture_);
+      texture_ = nullptr;
     }
   }
 
-  GLuint id_{0};
+  SDL_Texture *texture_{nullptr};
 };
 
 class TextureManager
 {
 public:
-  [[nodiscard]] GLuint create_paddle_texture(int width, int height)
+  explicit TextureManager(SDL_Renderer *renderer) : renderer_{renderer}
+  {
+  }
+
+  [[nodiscard]] SDL_Texture *create_paddle_texture(int width, int height)
   {
     std::vector<std::uint8_t> pixels = generate_paddle_pixels(width, height);
     Texture texture = create_texture_from_pixels(width, height, pixels.data());
-    GLuint id = texture.id();
+    SDL_Texture *sdl_texture = texture.get();
     textures_.push_back(std::move(texture));
-    return id;
+    return sdl_texture;
   }
 
-  [[nodiscard]] GLuint create_ball_texture(int width, int height)
+  [[nodiscard]] SDL_Texture *create_ball_texture(int width, int height)
   {
     std::vector<std::uint8_t> pixels = generate_ball_pixels(width, height);
     Texture texture = create_texture_from_pixels(width, height, pixels.data());
-    GLuint id = texture.id();
+    SDL_Texture *sdl_texture = texture.get();
     textures_.push_back(std::move(texture));
-    return id;
+    return sdl_texture;
   }
 
-  [[nodiscard]] GLuint create_brick_texture(int width, int height, std::uint8_t r, std::uint8_t g,
-                                            std::uint8_t b)
+  [[nodiscard]] SDL_Texture *create_brick_texture(int width, int height, std::uint8_t r,
+                                                  std::uint8_t g, std::uint8_t b)
   {
     std::vector<std::uint8_t> pixels = generate_brick_pixels(width, height, r, g, b);
     Texture texture = create_texture_from_pixels(width, height, pixels.data());
-    GLuint id = texture.id();
+    SDL_Texture *sdl_texture = texture.get();
     textures_.push_back(std::move(texture));
-    return id;
+    return sdl_texture;
   }
 
 private:
-  std::vector<Texture> textures_;
   [[nodiscard]] std::vector<std::uint8_t> generate_paddle_pixels(int width, int height) const
   {
     std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width * height * 4));
@@ -365,22 +368,29 @@ private:
   [[nodiscard]] Texture create_texture_from_pixels(int width, int height,
                                                    const std::uint8_t *pixels) const
   {
-    GLuint texture_id;
-    glGenTextures(1, &texture_id);
-
-    if (texture_id == 0)
+    // Create surface and copy pixel data (SDL_CreateSurfaceFrom requires non-const void*)
+    SDL_Surface *surface = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_RGBA32);
+    if (surface == nullptr)
     {
-      throw std::runtime_error("Failed to generate OpenGL texture");
+      throw std::runtime_error("Failed to create SDL surface: " + std::string(SDL_GetError()));
     }
 
-    glBindTexture(GL_TEXTURE_2D, texture_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    // Copy pixel data to surface
+    std::memcpy(surface->pixels, pixels, static_cast<std::size_t>(width * height * 4));
 
-    return Texture{texture_id};
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer_, surface);
+    SDL_DestroySurface(surface);
+
+    if (texture == nullptr)
+    {
+      throw std::runtime_error("Failed to create SDL texture: " + std::string(SDL_GetError()));
+    }
+
+    return Texture{texture};
   }
+
+  SDL_Renderer *renderer_{nullptr};
+  std::vector<Texture> textures_;
 };
 
 } // namespace breakout

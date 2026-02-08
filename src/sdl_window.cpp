@@ -55,13 +55,7 @@ void SDL::cleanup() noexcept
 // SDLWindow class implementation
 SDLWindow::SDLWindow(std::string_view title, int width, int height)
 {
-  // Set OpenGL attributes
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-  window_ = SDL_CreateWindow(std::string(title).c_str(), width, height, SDL_WINDOW_OPENGL);
+  window_ = SDL_CreateWindow(std::string(title).c_str(), width, height, 0);
 
   if (!window_)
   {
@@ -69,18 +63,12 @@ SDLWindow::SDLWindow(std::string_view title, int width, int height)
     throw std::runtime_error("Failed to create SDL window: " + std::string(SDL_GetError()));
   }
 
-  context_ = SDL_GL_CreateContext(window_);
-  if (!context_)
+  renderer_ = SDL_CreateRenderer(window_, nullptr);
+  if (!renderer_)
   {
     SDL_DestroyWindow(window_);
     window_ = nullptr;
-    throw std::runtime_error("Failed to create OpenGL context: " + std::string(SDL_GetError()));
-  }
-
-  // Enable VSync for smooth rendering (-1 = adaptive, 1 = standard)
-  if (SDL_GL_SetSwapInterval(-1) != 0)
-  {
-    SDL_GL_SetSwapInterval(1);
+    throw std::runtime_error("Failed to create SDL renderer: " + std::string(SDL_GetError()));
   }
 }
 
@@ -90,10 +78,10 @@ SDLWindow::~SDLWindow()
 }
 
 SDLWindow::SDLWindow(SDLWindow &&other) noexcept
-    : window_(other.window_), context_(other.context_), should_close_(other.should_close_)
+    : window_(other.window_), renderer_(other.renderer_), should_close_(other.should_close_)
 {
   other.window_ = nullptr;
-  other.context_ = nullptr;
+  other.renderer_ = nullptr;
   other.should_close_ = false;
 }
 
@@ -103,10 +91,10 @@ SDLWindow &SDLWindow::operator=(SDLWindow &&other) noexcept
   {
     cleanup();
     window_ = other.window_;
-    context_ = other.context_;
+    renderer_ = other.renderer_;
     should_close_ = other.should_close_;
     other.window_ = nullptr;
-    other.context_ = nullptr;
+    other.renderer_ = nullptr;
     other.should_close_ = false;
   }
   return *this;
@@ -114,10 +102,10 @@ SDLWindow &SDLWindow::operator=(SDLWindow &&other) noexcept
 
 void SDLWindow::cleanup() noexcept
 {
-  if (context_)
+  if (renderer_)
   {
-    SDL_GL_DestroyContext(context_);
-    context_ = nullptr;
+    SDL_DestroyRenderer(renderer_);
+    renderer_ = nullptr;
   }
   if (window_)
   {
@@ -126,11 +114,11 @@ void SDLWindow::cleanup() noexcept
   }
 }
 
-void SDLWindow::swap_buffers() const
+void SDLWindow::present() const
 {
-  if (window_)
+  if (renderer_)
   {
-    SDL_GL_SwapWindow(window_);
+    SDL_RenderPresent(renderer_);
   }
 }
 
@@ -159,4 +147,9 @@ void SDLWindow::handle_events()
       break;
     }
   }
+}
+
+SDL_Renderer *SDLWindow::get_renderer() const
+{
+  return renderer_;
 }

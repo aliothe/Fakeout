@@ -1,5 +1,6 @@
 #pragma once
 
+#include <SDL3/SDL.h>
 #include <array>
 #include <cstdint>
 
@@ -33,7 +34,7 @@ struct TransformComponent
 
 struct SpriteComponent
 {
-  std::uint32_t texture_id;
+  SDL_Texture *texture;
   Vec4 tint;
 };
 
