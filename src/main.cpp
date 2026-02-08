@@ -1,5 +1,6 @@
 #include "ecs/component.hpp"
 #include "ecs/registry.hpp"
+#include "game_constants.hpp"
 #include "sdl_window.hpp"
 #include "sound_manager.hpp"
 #include "systems/ball_physics_system.hpp"
@@ -18,16 +19,6 @@
 
 namespace
 {
-constexpr int WINDOW_WIDTH = 800;
-constexpr int WINDOW_HEIGHT = 600;
-constexpr std::array<float, 4> CLEAR_COLOR{0.1F, 0.2F, 0.3F, 1.0F};
-constexpr float PADDLE_WIDTH = 100.0F;
-constexpr float PADDLE_HEIGHT = 20.0F;
-constexpr float PADDLE_Y_OFFSET = 50.0F;
-constexpr int TEXTURE_WIDTH = 100;
-constexpr int TEXTURE_HEIGHT = 20;
-constexpr float CENTER_FACTOR = 2.0F;
-
 using breakout::ecs::BallComponent;
 using breakout::ecs::BrickColor;
 using breakout::ecs::BrickComponent;
@@ -43,22 +34,25 @@ Entity create_paddle(Registry &registry, breakout::TextureManager &texture_manag
 {
   auto paddle = registry.create_entity();
 
-  auto paddle_texture = texture_manager.create_paddle_texture(TEXTURE_WIDTH, TEXTURE_HEIGHT);
+  auto paddle_texture = texture_manager.create_paddle_texture(breakout::PADDLE_TEXTURE_WIDTH,
+                                                              breakout::PADDLE_TEXTURE_HEIGHT);
   GLuint texture_id = paddle_texture.id();
 
   static std::vector<breakout::Texture> textures;
   textures.push_back(std::move(paddle_texture));
 
   registry.add_component<TransformComponent>(
-      paddle, TransformComponent{{WINDOW_WIDTH / CENTER_FACTOR,
-                                  WINDOW_HEIGHT - PADDLE_Y_OFFSET - PADDLE_HEIGHT / CENTER_FACTOR},
-                                 PADDLE_WIDTH,
-                                 PADDLE_HEIGHT});
+      paddle, TransformComponent{{breakout::PADDLE_CENTER_X, breakout::PADDLE_CENTER_Y},
+                                 breakout::PADDLE_WIDTH,
+                                 breakout::PADDLE_HEIGHT});
 
-  registry.add_component<SpriteComponent>(paddle,
-                                          SpriteComponent{texture_id, {1.0F, 1.0F, 1.0F, 1.0F}});
+  registry.add_component<SpriteComponent>(
+      paddle, SpriteComponent{texture_id,
+                              {breakout::DEFAULT_TINT[0], breakout::DEFAULT_TINT[1],
+                               breakout::DEFAULT_TINT[2], breakout::DEFAULT_TINT[3]}});
 
-  registry.add_component<VelocityComponent>(paddle, VelocityComponent{{0.0F, 0.0F}});
+  registry.add_component<VelocityComponent>(
+      paddle, VelocityComponent{{breakout::ZERO_VELOCITY[0], breakout::ZERO_VELOCITY[1]}});
 
   registry.add_component<PaddleComponent>(paddle, PaddleComponent{});
   registry.add_component<PlayerControllerComponent>(paddle, PlayerControllerComponent{});
@@ -66,16 +60,12 @@ Entity create_paddle(Registry &registry, breakout::TextureManager &texture_manag
   return paddle;
 }
 
-constexpr float BALL_SIZE = 16.0F;
-constexpr int BALL_TEXTURE_SIZE = 16;
-constexpr float BALL_INITIAL_VELOCITY_X = 200.0F;
-constexpr float BALL_INITIAL_VELOCITY_Y = 300.0F;
-
 Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager)
 {
   auto ball = registry.create_entity();
 
-  auto ball_texture = texture_manager.create_ball_texture(BALL_TEXTURE_SIZE, BALL_TEXTURE_SIZE);
+  auto ball_texture =
+      texture_manager.create_ball_texture(breakout::BALL_TEXTURE_SIZE, breakout::BALL_TEXTURE_SIZE);
   GLuint texture_id = ball_texture.id();
 
   static std::vector<breakout::Texture> textures;
@@ -83,57 +73,37 @@ Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager
 
   // Start ball in center, moving down at an angle
   registry.add_component<TransformComponent>(
-      ball, TransformComponent{{WINDOW_WIDTH / CENTER_FACTOR, WINDOW_HEIGHT / CENTER_FACTOR},
-                               BALL_SIZE,
-                               BALL_SIZE});
+      ball, TransformComponent{{breakout::BALL_CENTER_X, breakout::BALL_CENTER_Y},
+                               breakout::BALL_SIZE,
+                               breakout::BALL_SIZE});
 
-  registry.add_component<SpriteComponent>(ball,
-                                          SpriteComponent{texture_id, {1.0F, 1.0F, 1.0F, 1.0F}});
+  registry.add_component<SpriteComponent>(
+      ball, SpriteComponent{texture_id,
+                            {breakout::DEFAULT_TINT[0], breakout::DEFAULT_TINT[1],
+                             breakout::DEFAULT_TINT[2], breakout::DEFAULT_TINT[3]}});
 
   // Initial velocity: moving down and to the right
   registry.add_component<VelocityComponent>(
-      ball, VelocityComponent{{BALL_INITIAL_VELOCITY_X, BALL_INITIAL_VELOCITY_Y}});
+      ball,
+      VelocityComponent{{breakout::BALL_INITIAL_VELOCITY_X, breakout::BALL_INITIAL_VELOCITY_Y}});
 
   registry.add_component<BallComponent>(ball, BallComponent{});
 
   return ball;
 }
 
-constexpr float BRICK_WIDTH = 60.0F;
-constexpr float BRICK_HEIGHT = 20.0F;
-constexpr int BRICK_TEXTURE_WIDTH = 60;
-constexpr int BRICK_TEXTURE_HEIGHT = 20;
-constexpr int BRICK_ROWS = 6;
-constexpr int BRICK_COLS = 10;
-constexpr float BRICK_WALL_TOP_OFFSET = 60.0F;
-
-// Brick colors (RGB values)
-constexpr std::uint8_t RED_R = 220;
-constexpr std::uint8_t RED_G = 50;
-constexpr std::uint8_t RED_B = 50;
-constexpr std::uint8_t YELLOW_R = 220;
-constexpr std::uint8_t YELLOW_G = 200;
-constexpr std::uint8_t YELLOW_B = 50;
-constexpr std::uint8_t BLUE_R = 50;
-constexpr std::uint8_t BLUE_G = 100;
-constexpr std::uint8_t BLUE_B = 220;
-
-// Brick distribution weights (total = 10)
-constexpr int BRICK_DIST_MAX = 9;
-constexpr int BRICK_EMPTY_THRESHOLD = 4; // 0-3: empty (40%)
-constexpr int BRICK_RED_VALUE = 4;       // 4: red (10%)
-constexpr int BRICK_YELLOW_MIN = 5;      // 5-6: yellow (20%)
-constexpr int BRICK_YELLOW_MAX = 7;      // 7-9: blue (30%)
-
 void create_brick_wall(Registry &registry, breakout::TextureManager &texture_manager)
 {
   // Pre-generate textures for each brick type
-  auto red_texture = texture_manager.create_brick_texture(BRICK_TEXTURE_WIDTH, BRICK_TEXTURE_HEIGHT,
-                                                          RED_R, RED_G, RED_B);
+  auto red_texture = texture_manager.create_brick_texture(
+      breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_RED_R,
+      breakout::BRICK_RED_G, breakout::BRICK_RED_B);
   auto yellow_texture = texture_manager.create_brick_texture(
-      BRICK_TEXTURE_WIDTH, BRICK_TEXTURE_HEIGHT, YELLOW_R, YELLOW_G, YELLOW_B);
+      breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_YELLOW_R,
+      breakout::BRICK_YELLOW_G, breakout::BRICK_YELLOW_B);
   auto blue_texture = texture_manager.create_brick_texture(
-      BRICK_TEXTURE_WIDTH, BRICK_TEXTURE_HEIGHT, BLUE_R, BLUE_G, BLUE_B);
+      breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_BLUE_R,
+      breakout::BRICK_BLUE_G, breakout::BRICK_BLUE_B);
 
   static std::vector<breakout::Texture> textures;
   textures.push_back(std::move(red_texture));
@@ -145,65 +115,71 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
   GLuint blue_id = textures[2].id();
 
   // Calculate total width and starting X position to center the wall
-  float total_width = static_cast<float>(BRICK_COLS) * BRICK_WIDTH;
-  float start_x = (WINDOW_WIDTH - total_width) / CENTER_FACTOR + BRICK_WIDTH / CENTER_FACTOR;
+  float total_width = static_cast<float>(breakout::BRICK_COLS) * breakout::BRICK_WIDTH;
+  float start_x =
+      (static_cast<float>(breakout::WINDOW_WIDTH) - total_width) / breakout::HALF_FACTOR;
 
-  // Random number generation with weighted distribution
-  // Weights: Empty=4, Red=1, Yellow=2, Blue=3 (total=10)
+  // Random number generation with weighted distribution using std::discrete_distribution
+  // Weights: Empty=4, Red=1, Yellow=2, Blue=3
   // Probabilities: Empty=40%, Red=10%, Yellow=20%, Blue=30%
   std::mt19937 rng(static_cast<unsigned int>(std::time(nullptr)));
-  std::uniform_int_distribution<int> brick_type_dist(0, BRICK_DIST_MAX);
+  std::discrete_distribution<int> brick_dist{
+      breakout::BRICK_WEIGHT_EMPTY, breakout::BRICK_WEIGHT_RED, breakout::BRICK_WEIGHT_YELLOW,
+      breakout::BRICK_WEIGHT_BLUE};
 
-  for (int row = 0; row < BRICK_ROWS; ++row)
+  for (int row = 0; row < breakout::BRICK_ROWS; ++row)
   {
-    for (int col = 0; col < BRICK_COLS; ++col)
+    for (int col = 0; col < breakout::BRICK_COLS; ++col)
     {
-      // Randomly decide if this cell should have a brick and what type
-      int brick_type = brick_type_dist(rng);
+      // Randomly decide brick type using weighted distribution
+      // 0 = empty, 1 = red, 2 = yellow, 3 = blue
+      int brick_type = brick_dist(rng);
 
       // Empty cell check (40% probability), skip creating a brick
-      if (brick_type < BRICK_EMPTY_THRESHOLD)
+      if (brick_type == 0)
       {
         continue;
       }
 
       auto brick = registry.create_entity();
 
-      float x = start_x + static_cast<float>(col) * BRICK_WIDTH;
-      float y = BRICK_WALL_TOP_OFFSET + static_cast<float>(row) * BRICK_HEIGHT;
+      float x = start_x + static_cast<float>(col) * breakout::BRICK_WIDTH;
+      float y = breakout::BRICK_WALL_TOP_OFFSET + static_cast<float>(row) * breakout::BRICK_HEIGHT;
 
       registry.add_component<TransformComponent>(
-          brick, TransformComponent{{x, y}, BRICK_WIDTH, BRICK_HEIGHT});
+          brick, TransformComponent{{x, y}, breakout::BRICK_WIDTH, breakout::BRICK_HEIGHT});
 
-      // Determine brick type based on weighted random selection
+      // Determine brick properties based on weighted random selection
       int hit_points = 0;
       GLuint texture_id = 0;
       BrickColor color = BrickColor::BLUE;
 
-      if (brick_type == BRICK_RED_VALUE)
+      if (brick_type == 1)
       {
         // Red bricks (3 hits) - 10% probability
         hit_points = 3;
         texture_id = red_id;
         color = BrickColor::RED;
       }
-      else if (brick_type >= BRICK_YELLOW_MIN && brick_type < BRICK_YELLOW_MAX)
+      else if (brick_type == 2)
       {
-        // Yellow bricks (2 hits) - 20% probability (values 5 and 6)
+        // Yellow bricks (2 hits) - 20% probability
         hit_points = 2;
         texture_id = yellow_id;
         color = BrickColor::YELLOW;
       }
       else
       {
-        // Blue bricks (1 hit) - 30% probability (values 7-9)
+        // Blue bricks (1 hit) - 30% probability
         hit_points = 1;
         texture_id = blue_id;
         color = BrickColor::BLUE;
       }
 
       registry.add_component<SpriteComponent>(
-          brick, SpriteComponent{texture_id, {1.0F, 1.0F, 1.0F, 1.0F}});
+          brick, SpriteComponent{texture_id,
+                                 {breakout::DEFAULT_TINT[0], breakout::DEFAULT_TINT[1],
+                                  breakout::DEFAULT_TINT[2], breakout::DEFAULT_TINT[3]}});
       registry.add_component<BrickComponent>(brick, BrickComponent{hit_points, color});
     }
   }
@@ -219,10 +195,11 @@ int main()
     {
       const char *error = SDL_GetError();
       throw std::runtime_error(std::string("Failed to initialize SDL: ") +
-                               (error ? error : "unknown error"));
+                               (error != nullptr ? error : "unknown error"));
     }
 
-    SDLWindow window("Breakout - Move paddle to bounce ball", WINDOW_WIDTH, WINDOW_HEIGHT);
+    SDLWindow window("Breakout - Move paddle to bounce ball", breakout::WINDOW_WIDTH,
+                     breakout::WINDOW_HEIGHT);
 
     Registry registry;
     breakout::TextureManager texture_manager;
@@ -237,8 +214,8 @@ int main()
     create_ball(registry, texture_manager);
     create_brick_wall(registry, texture_manager);
 
-    render_system.setup_ortho_projection(0.0F, static_cast<float>(WINDOW_WIDTH),
-                                         static_cast<float>(WINDOW_HEIGHT), 0.0F);
+    render_system.setup_ortho_projection(0.0F, static_cast<float>(breakout::WINDOW_WIDTH),
+                                         static_cast<float>(breakout::WINDOW_HEIGHT), 0.0F);
 
     auto last_time = std::chrono::steady_clock::now();
 
@@ -250,12 +227,13 @@ int main()
 
       window.handle_events();
       input_system.update(registry);
-      movement_system.update(registry, delta_time, static_cast<float>(WINDOW_WIDTH));
-      ball_physics_system.update(registry, delta_time, static_cast<float>(WINDOW_WIDTH),
-                                 static_cast<float>(WINDOW_HEIGHT));
+      movement_system.update(registry, delta_time, static_cast<float>(breakout::WINDOW_WIDTH));
+      ball_physics_system.update(registry, delta_time, static_cast<float>(breakout::WINDOW_WIDTH),
+                                 static_cast<float>(breakout::WINDOW_HEIGHT));
       particle_system.update(registry, delta_time);
 
-      glClearColor(CLEAR_COLOR[0], CLEAR_COLOR[1], CLEAR_COLOR[2], CLEAR_COLOR[3]);
+      glClearColor(breakout::CLEAR_COLOR[0], breakout::CLEAR_COLOR[1], breakout::CLEAR_COLOR[2],
+                   breakout::CLEAR_COLOR[3]);
       glClear(GL_COLOR_BUFFER_BIT);
 
       render_system.render(registry);
