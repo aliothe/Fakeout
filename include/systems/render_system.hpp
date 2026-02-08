@@ -3,8 +3,6 @@
 #include "ecs/component.hpp"
 #include "ecs/registry.hpp"
 #include <SDL3/SDL.h>
-#include <cmath>
-#include <cstdint>
 
 namespace breakout::systems
 {

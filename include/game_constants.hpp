@@ -3,7 +3,6 @@
 #include "ecs/component.hpp"
 #include <SDL3/SDL.h>
 #include <array>
-#include <cstdint>
 
 namespace breakout
 {

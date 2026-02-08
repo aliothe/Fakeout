@@ -2,7 +2,6 @@
 
 #include <SDL3/SDL.h>
 #include <cmath>
-#include <cstdint>
 #include <memory>
 #include <random>
 #include <stdexcept>
