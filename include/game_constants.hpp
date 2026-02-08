@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ecs/component.hpp"
 #include <SDL3/SDL.h>
 #include <array>
 #include <cstdint>
@@ -13,6 +14,8 @@ inline namespace constants
 // Window dimensions
 constexpr int WINDOW_WIDTH = 800;
 constexpr int WINDOW_HEIGHT = 600;
+constexpr float WINDOW_WIDTH_F = static_cast<float>(WINDOW_WIDTH);
+constexpr float WINDOW_HEIGHT_F = static_cast<float>(WINDOW_HEIGHT);
 
 // Clear color (RGBA float 0.0-1.0)
 constexpr float CLEAR_COLOR_R = 0.1F;
@@ -83,15 +86,22 @@ enum class BrickType : int
   Blue = 3
 };
 
+// Color conversion constant for normalizing SDL_Color bytes to 0.0-1.0 float range
+constexpr float COLOR_BYTE_TO_FLOAT = 255.0F;
+
 // Sprite tint colors (RGBA)
 constexpr std::array<float, 4> DEFAULT_TINT{1.0F, 1.0F, 1.0F, 1.0F};
 constexpr SDL_Color DEFAULT_TINT_SDL{255, 255, 255, 255};
+constexpr std::array<float, 4> DEFAULT_TINT_FLOAT{
+    DEFAULT_TINT_SDL.r / COLOR_BYTE_TO_FLOAT, DEFAULT_TINT_SDL.g / COLOR_BYTE_TO_FLOAT,
+    DEFAULT_TINT_SDL.b / COLOR_BYTE_TO_FLOAT, DEFAULT_TINT_SDL.a / COLOR_BYTE_TO_FLOAT};
+
+// Default tint as Vec4 for SpriteComponent (avoids repeated conversion)
+inline constexpr breakout::ecs::Vec4 DEFAULT_TINT_VEC4{
+    DEFAULT_TINT_FLOAT[0], DEFAULT_TINT_FLOAT[1], DEFAULT_TINT_FLOAT[2], DEFAULT_TINT_FLOAT[3]};
 
 // Zero velocity for stationary objects
 constexpr std::array<float, 2> ZERO_VELOCITY{0.0F, 0.0F};
-
-// Color conversion constant for normalizing SDL_Color bytes to 0.0-1.0 float range
-constexpr float COLOR_BYTE_TO_FLOAT = 255.0F;
 
 // Centering divisor for positioning calculations
 constexpr float CENTER_DIVISOR = 2.0F;

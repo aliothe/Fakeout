@@ -14,7 +14,6 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
-#include <ctime>
 #include <iostream>
 #include <random>
 
@@ -44,12 +43,8 @@ Entity create_paddle(Registry &registry, breakout::TextureManager &texture_manag
                                  breakout::PADDLE_WIDTH,
                                  breakout::PADDLE_HEIGHT});
 
-  registry.add_component<SpriteComponent>(
-      paddle, SpriteComponent{texture,
-                              {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT,
-                               breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
-                               breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT,
-                               breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
+  registry.add_component<SpriteComponent>(paddle,
+                                          SpriteComponent{texture, breakout::DEFAULT_TINT_VEC4});
 
   registry.add_component<VelocityComponent>(
       paddle, VelocityComponent{{breakout::ZERO_VELOCITY[0], breakout::ZERO_VELOCITY[1]}});
@@ -73,12 +68,8 @@ Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager
                                breakout::BALL_SIZE,
                                breakout::BALL_SIZE});
 
-  registry.add_component<SpriteComponent>(
-      ball, SpriteComponent{texture,
-                            {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT,
-                             breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
-                             breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT,
-                             breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
+  registry.add_component<SpriteComponent>(ball,
+                                          SpriteComponent{texture, breakout::DEFAULT_TINT_VEC4});
 
   // Initial velocity: moving down and to the right
   registry.add_component<VelocityComponent>(
@@ -105,8 +96,7 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
 
   // Calculate total width and starting X position to center the wall
   float total_width = static_cast<float>(breakout::BRICK_COLS) * breakout::BRICK_WIDTH;
-  float start_x =
-      (static_cast<float>(breakout::WINDOW_WIDTH) - total_width) / breakout::CENTER_DIVISOR;
+  float start_x = (breakout::WINDOW_WIDTH_F - total_width) / breakout::CENTER_DIVISOR;
 
   // Random number generation with weighted distribution using std::discrete_distribution
   // Weights: Empty=4, Red=1, Yellow=2, Blue=3
@@ -122,8 +112,7 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
     for (int col = 0; col < breakout::BRICK_COLS; ++col)
     {
       // Randomly decide brick type using weighted distribution
-      int brick_type_value = brick_dist(rng);
-      auto brick_type = static_cast<BrickType>(brick_type_value);
+      auto brick_type = static_cast<BrickType>(brick_dist(rng));
 
       // Empty cell check (40% probability), skip creating a brick
       if (brick_type == BrickType::Empty)
@@ -167,11 +156,7 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
       }
 
       registry.add_component<SpriteComponent>(
-          brick, SpriteComponent{texture,
-                                 {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT,
-                                  breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
-                                  breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT,
-                                  breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
+          brick, SpriteComponent{texture, breakout::DEFAULT_TINT_VEC4});
       registry.add_component<BrickComponent>(brick, BrickComponent{hit_points, color});
     }
   }
@@ -194,6 +179,10 @@ int main()
                      breakout::WINDOW_HEIGHT);
 
     SDL_Renderer *renderer = window.get_renderer();
+    if (renderer == nullptr)
+    {
+      throw std::runtime_error("Failed to obtain SDL renderer: " + std::string(SDL_GetError()));
+    }
 
     // Enable vsync for smooth rendering
     if (!SDL_SetRenderVSync(renderer, 1))
@@ -225,9 +214,9 @@ int main()
 
       window.handle_events();
       input_system.update(registry);
-      movement_system.update(registry, delta_time, static_cast<float>(breakout::WINDOW_WIDTH));
-      ball_physics_system.update(registry, delta_time, static_cast<float>(breakout::WINDOW_WIDTH),
-                                 static_cast<float>(breakout::WINDOW_HEIGHT));
+      movement_system.update(registry, delta_time, breakout::WINDOW_WIDTH_F);
+      ball_physics_system.update(registry, delta_time, breakout::WINDOW_WIDTH_F,
+                                 breakout::WINDOW_HEIGHT_F);
       particle_system.update(registry, delta_time);
 
       // Clear screen with background color
