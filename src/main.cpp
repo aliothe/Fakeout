@@ -45,10 +45,11 @@ Entity create_paddle(Registry &registry, breakout::TextureManager &texture_manag
                                  breakout::PADDLE_HEIGHT});
 
   registry.add_component<SpriteComponent>(
-      paddle, SpriteComponent{
-                  texture,
-                  {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
-                   breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
+      paddle, SpriteComponent{texture,
+                              {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT,
+                               breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
+                               breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT,
+                               breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
 
   registry.add_component<VelocityComponent>(
       paddle, VelocityComponent{{breakout::ZERO_VELOCITY[0], breakout::ZERO_VELOCITY[1]}});
@@ -73,10 +74,11 @@ Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager
                                breakout::BALL_SIZE});
 
   registry.add_component<SpriteComponent>(
-      ball, SpriteComponent{
-                texture,
-                {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
-                 breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
+      ball, SpriteComponent{texture,
+                            {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT,
+                             breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
+                             breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT,
+                             breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
 
   // Initial velocity: moving down and to the right
   registry.add_component<VelocityComponent>(
@@ -103,12 +105,14 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
 
   // Calculate total width and starting X position to center the wall
   float total_width = static_cast<float>(breakout::BRICK_COLS) * breakout::BRICK_WIDTH;
-  float start_x = (static_cast<float>(breakout::WINDOW_WIDTH) - total_width) / breakout::CENTER_DIVISOR;
+  float start_x =
+      (static_cast<float>(breakout::WINDOW_WIDTH) - total_width) / breakout::CENTER_DIVISOR;
 
   // Random number generation with weighted distribution using std::discrete_distribution
   // Weights: Empty=4, Red=1, Yellow=2, Blue=3
   // Probabilities: Empty=40%, Red=10%, Yellow=20%, Blue=30%
-  std::mt19937 rng(static_cast<unsigned int>(std::time(nullptr)));
+  std::random_device rd;
+  std::mt19937 rng(rd());
   std::discrete_distribution<int> brick_dist{
       breakout::BRICK_WEIGHT_EMPTY, breakout::BRICK_WEIGHT_RED, breakout::BRICK_WEIGHT_YELLOW,
       breakout::BRICK_WEIGHT_BLUE};
@@ -163,11 +167,11 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
       }
 
       registry.add_component<SpriteComponent>(
-          brick,
-          SpriteComponent{
-              texture,
-              {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
-               breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
+          brick, SpriteComponent{texture,
+                                 {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT,
+                                  breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
+                                  breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT,
+                                  breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
       registry.add_component<BrickComponent>(brick, BrickComponent{hit_points, color});
     }
   }
