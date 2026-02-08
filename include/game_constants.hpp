@@ -54,6 +54,7 @@ constexpr int BRICK_TEXTURE_WIDTH = 60;
 constexpr int BRICK_TEXTURE_HEIGHT = 20;
 constexpr int BRICK_ROWS = 6;
 constexpr int BRICK_COLS = 10;
+constexpr float BRICK_COLS_F = static_cast<float>(BRICK_COLS);
 constexpr float BRICK_WALL_TOP_OFFSET = 60.0F;
 
 // Brick colors (RGB values)

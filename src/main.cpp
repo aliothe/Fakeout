@@ -12,7 +12,6 @@
 #include <SDL3/SDL.h>
 #include <array>
 #include <chrono>
-#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <random>
@@ -95,7 +94,7 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
       breakout::BRICK_BLUE_G, breakout::BRICK_BLUE_B);
 
   // Calculate total width and starting X position to center the wall
-  float total_width = static_cast<float>(breakout::BRICK_COLS) * breakout::BRICK_WIDTH;
+  float total_width = breakout::BRICK_COLS_F * breakout::BRICK_WIDTH;
   float start_x = (breakout::WINDOW_WIDTH_F - total_width) / breakout::CENTER_DIVISOR;
 
   // Random number generation with weighted distribution using std::discrete_distribution

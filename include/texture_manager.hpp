@@ -78,6 +78,10 @@ public:
     std::vector<std::uint8_t> pixels = generate_paddle_pixels(width, height);
     Texture texture = create_texture_from_pixels(width, height, pixels.data());
     SDL_Texture *sdl_texture = texture.get();
+    if (sdl_texture == nullptr)
+    {
+      throw std::runtime_error("Failed to create paddle texture: " + std::string(SDL_GetError()));
+    }
     textures_.push_back(std::move(texture));
     return sdl_texture;
   }
@@ -87,6 +91,10 @@ public:
     std::vector<std::uint8_t> pixels = generate_ball_pixels(width, height);
     Texture texture = create_texture_from_pixels(width, height, pixels.data());
     SDL_Texture *sdl_texture = texture.get();
+    if (sdl_texture == nullptr)
+    {
+      throw std::runtime_error("Failed to create ball texture: " + std::string(SDL_GetError()));
+    }
     textures_.push_back(std::move(texture));
     return sdl_texture;
   }
@@ -97,6 +105,10 @@ public:
     std::vector<std::uint8_t> pixels = generate_brick_pixels(width, height, r, g, b);
     Texture texture = create_texture_from_pixels(width, height, pixels.data());
     SDL_Texture *sdl_texture = texture.get();
+    if (sdl_texture == nullptr)
+    {
+      throw std::runtime_error("Failed to create brick texture: " + std::string(SDL_GetError()));
+    }
     textures_.push_back(std::move(texture));
     return sdl_texture;
   }
