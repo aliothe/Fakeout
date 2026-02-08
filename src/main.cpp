@@ -208,7 +208,7 @@ int main()
       last_time = current_time;
 
       window.handle_events();
-      input_system.update(registry);
+      input_system.update(registry, delta_time);
       movement_system.update(registry, delta_time, breakout::WINDOW_WIDTH_F);
       ball_physics_system.update(registry, delta_time, breakout::WINDOW_WIDTH_F,
                                  breakout::WINDOW_HEIGHT_F);

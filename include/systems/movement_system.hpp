@@ -26,18 +26,13 @@ public:
 
       transform->position.x += velocity->velocity.x * delta_time;
 
-      const float half_width = transform->width / 2.0f;
-      const float min_x = half_width;
-      const float max_x = screen_width - half_width;
-
-      if (transform->position.x < min_x)
-      {
-        transform->position.x = min_x;
-      }
-      else if (transform->position.x > max_x)
-      {
-        transform->position.x = max_x;
-      }
+      // Keep paddle inside screen
+      const float half = transform->width / 2.0f;
+      transform->position.x = std::clamp(
+          transform->position.x,
+          half,
+          screen_width - half
+      );
     }
   }
 };

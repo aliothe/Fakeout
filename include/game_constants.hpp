@@ -10,6 +10,9 @@ namespace breakout
 inline namespace constants
 {
 
+// Almost ZERO
+constexpr float EPSILON = 0.001f;
+
 // Window dimensions
 constexpr int WINDOW_WIDTH = 800;
 constexpr int WINDOW_HEIGHT = 600;
