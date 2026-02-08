@@ -166,13 +166,9 @@ int main()
 {
   try
   {
-    // Initialize SDL with video and audio subsystems
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
-    {
-      const char *error = SDL_GetError();
-      throw std::runtime_error(std::string("Failed to initialize SDL: ") +
-                               (error != nullptr ? error : "unknown error"));
-    }
+    // SDL RAII wrapper - initialized first, destroyed last
+    // This ensures SDL_Quit() is called AFTER all SDL resources are destroyed
+    SDL sdl{SDL_INIT_VIDEO | SDL_INIT_AUDIO};
 
     SDLWindow window("Breakout - Move paddle to bounce ball", breakout::WINDOW_WIDTH,
                      breakout::WINDOW_HEIGHT);
@@ -229,13 +225,11 @@ int main()
     }
 
     std::cout << "Window closed successfully.\n";
-    SDL_Quit();
     return EXIT_SUCCESS;
   }
   catch (const std::exception &e)
   {
     std::cerr << "Error: " << e.what() << '\n';
-    SDL_Quit();
     return EXIT_FAILURE;
   }
 }

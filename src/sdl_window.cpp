@@ -4,7 +4,8 @@
 // SDL class implementation
 SDL::SDL(Uint32 flags)
 {
-  if (SDL_Init(flags) != 0)
+  // SDL3: SDL_Init returns true on success, false on failure
+  if (!SDL_Init(flags))
   {
     const char *error = SDL_GetError();
     std::cerr << "SDL Initialization Failed!\n";
