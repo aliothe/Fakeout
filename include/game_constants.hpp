@@ -1,5 +1,6 @@
 #pragma once
 
+#include <SDL3/SDL.h>
 #include <array>
 #include <cstdint>
 
@@ -13,13 +14,18 @@ inline namespace constants
 constexpr int WINDOW_WIDTH = 800;
 constexpr int WINDOW_HEIGHT = 600;
 
-// Clear color (RGBA)
+// Clear color (RGBA float 0.0-1.0)
 constexpr float CLEAR_COLOR_R = 0.1F;
 constexpr float CLEAR_COLOR_G = 0.2F;
 constexpr float CLEAR_COLOR_B = 0.3F;
 constexpr float CLEAR_COLOR_A = 1.0F;
 constexpr std::array<float, 4> CLEAR_COLOR{CLEAR_COLOR_R, CLEAR_COLOR_G, CLEAR_COLOR_B,
                                            CLEAR_COLOR_A};
+
+// Clear color as SDL_Color (precomputed byte values)
+constexpr SDL_Color CLEAR_COLOR_SDL{
+    static_cast<Uint8>(CLEAR_COLOR_R * 255.0F), static_cast<Uint8>(CLEAR_COLOR_G * 255.0F),
+    static_cast<Uint8>(CLEAR_COLOR_B * 255.0F), static_cast<Uint8>(CLEAR_COLOR_A * 255.0F)};
 
 // Paddle dimensions and positioning
 constexpr float PADDLE_WIDTH = 100.0F;
@@ -68,19 +74,27 @@ constexpr int BRICK_WEIGHT_RED = 1;
 constexpr int BRICK_WEIGHT_YELLOW = 2;
 constexpr int BRICK_WEIGHT_BLUE = 3;
 
+// Brick type enumeration (matches discrete_distribution indices)
+enum class BrickType : int
+{
+  Empty = 0,
+  Red = 1,
+  Yellow = 2,
+  Blue = 3
+};
+
 // Sprite tint colors (RGBA)
 constexpr std::array<float, 4> DEFAULT_TINT{1.0F, 1.0F, 1.0F, 1.0F};
+constexpr SDL_Color DEFAULT_TINT_SDL{255, 255, 255, 255};
 
 // Zero velocity for stationary objects
 constexpr std::array<float, 2> ZERO_VELOCITY{0.0F, 0.0F};
 
-// Halving factor for centering calculations
-constexpr float HALF_FACTOR = 2.0F;
+// Color conversion constant for normalizing SDL_Color bytes to 0.0-1.0 float range
+constexpr float COLOR_BYTE_TO_FLOAT = 255.0F;
 
-// Color conversion factor (for converting 0.0-1.0 float to 0-255 uint8)
-constexpr float COLOR_MAX_FLOAT = 1.0F;
-constexpr float COLOR_MAX_BYTE_FLOAT = 255.0F;
-constexpr std::uint8_t COLOR_MAX_BYTE = 255;
+// Centering divisor for positioning calculations
+constexpr float CENTER_DIVISOR = 2.0F;
 
 } // namespace constants
 

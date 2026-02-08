@@ -12,6 +12,7 @@
 #include <SDL3/SDL.h>
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
@@ -19,6 +20,7 @@
 
 namespace
 {
+using breakout::BrickType;
 using breakout::ecs::BallComponent;
 using breakout::ecs::BrickColor;
 using breakout::ecs::BrickComponent;
@@ -43,9 +45,10 @@ Entity create_paddle(Registry &registry, breakout::TextureManager &texture_manag
                                  breakout::PADDLE_HEIGHT});
 
   registry.add_component<SpriteComponent>(
-      paddle, SpriteComponent{texture,
-                              {breakout::DEFAULT_TINT[0], breakout::DEFAULT_TINT[1],
-                               breakout::DEFAULT_TINT[2], breakout::DEFAULT_TINT[3]}});
+      paddle, SpriteComponent{
+                  texture,
+                  {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
+                   breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
 
   registry.add_component<VelocityComponent>(
       paddle, VelocityComponent{{breakout::ZERO_VELOCITY[0], breakout::ZERO_VELOCITY[1]}});
@@ -70,9 +73,10 @@ Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager
                                breakout::BALL_SIZE});
 
   registry.add_component<SpriteComponent>(
-      ball, SpriteComponent{texture,
-                            {breakout::DEFAULT_TINT[0], breakout::DEFAULT_TINT[1],
-                             breakout::DEFAULT_TINT[2], breakout::DEFAULT_TINT[3]}});
+      ball, SpriteComponent{
+                texture,
+                {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
+                 breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
 
   // Initial velocity: moving down and to the right
   registry.add_component<VelocityComponent>(
@@ -99,8 +103,7 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
 
   // Calculate total width and starting X position to center the wall
   float total_width = static_cast<float>(breakout::BRICK_COLS) * breakout::BRICK_WIDTH;
-  float start_x =
-      (static_cast<float>(breakout::WINDOW_WIDTH) - total_width) / breakout::HALF_FACTOR;
+  float start_x = (static_cast<float>(breakout::WINDOW_WIDTH) - total_width) / breakout::CENTER_DIVISOR;
 
   // Random number generation with weighted distribution using std::discrete_distribution
   // Weights: Empty=4, Red=1, Yellow=2, Blue=3
@@ -115,11 +118,11 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
     for (int col = 0; col < breakout::BRICK_COLS; ++col)
     {
       // Randomly decide brick type using weighted distribution
-      // 0 = empty, 1 = red, 2 = yellow, 3 = blue
-      int brick_type = brick_dist(rng);
+      int brick_type_value = brick_dist(rng);
+      auto brick_type = static_cast<BrickType>(brick_type_value);
 
       // Empty cell check (40% probability), skip creating a brick
-      if (brick_type == 0)
+      if (brick_type == BrickType::Empty)
       {
         continue;
       }
@@ -137,14 +140,14 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
       SDL_Texture *texture = nullptr;
       BrickColor color = BrickColor::BLUE;
 
-      if (brick_type == 1)
+      if (brick_type == BrickType::Red)
       {
         // Red bricks (3 hits) - 10% probability
         hit_points = 3;
         texture = red_texture;
         color = BrickColor::RED;
       }
-      else if (brick_type == 2)
+      else if (brick_type == BrickType::Yellow)
       {
         // Yellow bricks (2 hits) - 20% probability
         hit_points = 2;
@@ -160,9 +163,11 @@ void create_brick_wall(Registry &registry, breakout::TextureManager &texture_man
       }
 
       registry.add_component<SpriteComponent>(
-          brick, SpriteComponent{texture,
-                                 {breakout::DEFAULT_TINT[0], breakout::DEFAULT_TINT[1],
-                                  breakout::DEFAULT_TINT[2], breakout::DEFAULT_TINT[3]}});
+          brick,
+          SpriteComponent{
+              texture,
+              {breakout::DEFAULT_TINT_SDL.r / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.g / breakout::COLOR_BYTE_TO_FLOAT,
+               breakout::DEFAULT_TINT_SDL.b / breakout::COLOR_BYTE_TO_FLOAT, breakout::DEFAULT_TINT_SDL.a / breakout::COLOR_BYTE_TO_FLOAT}});
       registry.add_component<BrickComponent>(brick, BrickComponent{hit_points, color});
     }
   }
@@ -185,6 +190,13 @@ int main()
                      breakout::WINDOW_HEIGHT);
 
     SDL_Renderer *renderer = window.get_renderer();
+
+    // Enable vsync for smooth rendering
+    if (!SDL_SetRenderVSync(renderer, 1))
+    {
+      // VSync not supported or failed, continue without it
+      std::cerr << "Warning: Failed to enable vsync: " << SDL_GetError() << '\n';
+    }
 
     Registry registry;
     breakout::TextureManager texture_manager(renderer);
@@ -215,12 +227,8 @@ int main()
       particle_system.update(registry, delta_time);
 
       // Clear screen with background color
-      SDL_SetRenderDrawColor(
-          renderer,
-          static_cast<std::uint8_t>(breakout::CLEAR_COLOR_R * breakout::COLOR_MAX_BYTE_FLOAT),
-          static_cast<std::uint8_t>(breakout::CLEAR_COLOR_G * breakout::COLOR_MAX_BYTE_FLOAT),
-          static_cast<std::uint8_t>(breakout::CLEAR_COLOR_B * breakout::COLOR_MAX_BYTE_FLOAT),
-          static_cast<std::uint8_t>(breakout::CLEAR_COLOR_A * breakout::COLOR_MAX_BYTE_FLOAT));
+      SDL_SetRenderDrawColor(renderer, breakout::CLEAR_COLOR_SDL.r, breakout::CLEAR_COLOR_SDL.g,
+                             breakout::CLEAR_COLOR_SDL.b, breakout::CLEAR_COLOR_SDL.a);
       SDL_RenderClear(renderer);
 
       render_system.render(registry);
