@@ -34,12 +34,8 @@ Entity create_paddle(Registry &registry, breakout::TextureManager &texture_manag
 {
   auto paddle = registry.create_entity();
 
-  auto paddle_texture = texture_manager.create_paddle_texture(breakout::PADDLE_TEXTURE_WIDTH,
-                                                              breakout::PADDLE_TEXTURE_HEIGHT);
-  GLuint texture_id = paddle_texture.id();
-
-  static std::vector<breakout::Texture> textures;
-  textures.push_back(std::move(paddle_texture));
+  GLuint texture_id = texture_manager.create_paddle_texture(breakout::PADDLE_TEXTURE_WIDTH,
+                                                            breakout::PADDLE_TEXTURE_HEIGHT);
 
   registry.add_component<TransformComponent>(
       paddle, TransformComponent{{breakout::PADDLE_CENTER_X, breakout::PADDLE_CENTER_Y},
@@ -64,12 +60,8 @@ Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager
 {
   auto ball = registry.create_entity();
 
-  auto ball_texture =
+  GLuint texture_id =
       texture_manager.create_ball_texture(breakout::BALL_TEXTURE_SIZE, breakout::BALL_TEXTURE_SIZE);
-  GLuint texture_id = ball_texture.id();
-
-  static std::vector<breakout::Texture> textures;
-  textures.push_back(std::move(ball_texture));
 
   // Start ball in center, moving down at an angle
   registry.add_component<TransformComponent>(
@@ -95,24 +87,15 @@ Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager
 void create_brick_wall(Registry &registry, breakout::TextureManager &texture_manager)
 {
   // Pre-generate textures for each brick type
-  auto red_texture = texture_manager.create_brick_texture(
+  GLuint red_id = texture_manager.create_brick_texture(
       breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_RED_R,
       breakout::BRICK_RED_G, breakout::BRICK_RED_B);
-  auto yellow_texture = texture_manager.create_brick_texture(
+  GLuint yellow_id = texture_manager.create_brick_texture(
       breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_YELLOW_R,
       breakout::BRICK_YELLOW_G, breakout::BRICK_YELLOW_B);
-  auto blue_texture = texture_manager.create_brick_texture(
+  GLuint blue_id = texture_manager.create_brick_texture(
       breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_BLUE_R,
       breakout::BRICK_BLUE_G, breakout::BRICK_BLUE_B);
-
-  static std::vector<breakout::Texture> textures;
-  textures.push_back(std::move(red_texture));
-  textures.push_back(std::move(yellow_texture));
-  textures.push_back(std::move(blue_texture));
-
-  GLuint red_id = textures[0].id();
-  GLuint yellow_id = textures[1].id();
-  GLuint blue_id = textures[2].id();
 
   // Calculate total width and starting X position to center the wall
   float total_width = static_cast<float>(breakout::BRICK_COLS) * breakout::BRICK_WIDTH;

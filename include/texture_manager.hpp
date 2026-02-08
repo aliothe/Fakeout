@@ -69,26 +69,36 @@ private:
 class TextureManager
 {
 public:
-  [[nodiscard]] Texture create_paddle_texture(int width, int height)
+  [[nodiscard]] GLuint create_paddle_texture(int width, int height)
   {
     std::vector<std::uint8_t> pixels = generate_paddle_pixels(width, height);
-    return create_texture_from_pixels(width, height, pixels.data());
+    Texture texture = create_texture_from_pixels(width, height, pixels.data());
+    GLuint id = texture.id();
+    textures_.push_back(std::move(texture));
+    return id;
   }
 
-  [[nodiscard]] Texture create_ball_texture(int width, int height)
+  [[nodiscard]] GLuint create_ball_texture(int width, int height)
   {
     std::vector<std::uint8_t> pixels = generate_ball_pixels(width, height);
-    return create_texture_from_pixels(width, height, pixels.data());
+    Texture texture = create_texture_from_pixels(width, height, pixels.data());
+    GLuint id = texture.id();
+    textures_.push_back(std::move(texture));
+    return id;
   }
 
-  [[nodiscard]] Texture create_brick_texture(int width, int height, std::uint8_t r, std::uint8_t g,
-                                             std::uint8_t b)
+  [[nodiscard]] GLuint create_brick_texture(int width, int height, std::uint8_t r, std::uint8_t g,
+                                            std::uint8_t b)
   {
     std::vector<std::uint8_t> pixels = generate_brick_pixels(width, height, r, g, b);
-    return create_texture_from_pixels(width, height, pixels.data());
+    Texture texture = create_texture_from_pixels(width, height, pixels.data());
+    GLuint id = texture.id();
+    textures_.push_back(std::move(texture));
+    return id;
   }
 
 private:
+  std::vector<Texture> textures_;
   [[nodiscard]] std::vector<std::uint8_t> generate_paddle_pixels(int width, int height) const
   {
     std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width * height * 4));
