@@ -12,6 +12,41 @@
 namespace breakout
 {
 
+// constexpr square root implementation (Newton-Raphson method)
+[[nodiscard]] static constexpr float constexpr_sqrt(float value)
+{
+  if (value <= 0.0f)
+  {
+    return 0.0f;
+  }
+
+  float guess = value;
+  constexpr float epsilon = 0.0001f;
+
+  // Newton-Raphson iteration
+  for (int i = 0; i < 20; ++i)
+  {
+    float next_guess = 0.5f * (guess + value / guess);
+    if (std::abs(next_guess - guess) < epsilon)
+    {
+      break;
+    }
+    guess = next_guess;
+  }
+
+  return guess;
+}
+
+[[nodiscard]] static constexpr float constexpr_min(float a, float b)
+{
+  return (a < b) ? a : b;
+}
+
+[[nodiscard]] static constexpr int constexpr_min_int(int a, int b)
+{
+  return (a < b) ? a : b;
+}
+
 class Texture
 {
 public:
@@ -72,10 +107,10 @@ public:
   {
   }
 
-  [[nodiscard]] SDL_Texture *create_paddle_texture(int width, int height)
+  template <int Width, int Height> [[nodiscard]] SDL_Texture *create_paddle_texture()
   {
-    std::vector<std::uint8_t> pixels = generate_paddle_pixels(width, height);
-    Texture texture = create_texture_from_pixels(width, height, pixels.data());
+    constexpr auto pixels = generate_paddle_pixels<Width, Height>();
+    Texture texture = create_texture_from_pixels(Width, Height, pixels.data());
     SDL_Texture *sdl_texture = texture.get();
     if (sdl_texture == nullptr)
     {
@@ -85,10 +120,10 @@ public:
     return sdl_texture;
   }
 
-  [[nodiscard]] SDL_Texture *create_ball_texture(int width, int height)
+  template <int Width, int Height> [[nodiscard]] SDL_Texture *create_ball_texture()
   {
-    std::vector<std::uint8_t> pixels = generate_ball_pixels(width, height);
-    Texture texture = create_texture_from_pixels(width, height, pixels.data());
+    constexpr auto pixels = generate_ball_pixels<Width, Height>();
+    Texture texture = create_texture_from_pixels(Width, Height, pixels.data());
     SDL_Texture *sdl_texture = texture.get();
     if (sdl_texture == nullptr)
     {
@@ -98,11 +133,11 @@ public:
     return sdl_texture;
   }
 
-  [[nodiscard]] SDL_Texture *create_brick_texture(int width, int height, std::uint8_t r,
-                                                  std::uint8_t g, std::uint8_t b)
+  template <int Width, int Height, std::uint8_t R, std::uint8_t G, std::uint8_t B>
+  [[nodiscard]] SDL_Texture *create_brick_texture()
   {
-    std::vector<std::uint8_t> pixels = generate_brick_pixels(width, height, r, g, b);
-    Texture texture = create_texture_from_pixels(width, height, pixels.data());
+    constexpr auto pixels = generate_brick_pixels<Width, Height, R, G, B>();
+    Texture texture = create_texture_from_pixels(Width, Height, pixels.data());
     SDL_Texture *sdl_texture = texture.get();
     if (sdl_texture == nullptr)
     {
@@ -113,62 +148,65 @@ public:
   }
 
 private:
-  [[nodiscard]] std::vector<std::uint8_t> generate_paddle_pixels(int width, int height) const
+  template <int Width, int Height>
+  [[nodiscard]] static constexpr auto generate_paddle_pixels()
+      -> std::array<std::uint8_t,
+                    static_cast<std::size_t>(Width) * static_cast<std::size_t>(Height) * 4>
   {
-    std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width * height * 4));
+    std::array<std::uint8_t, static_cast<std::size_t>(Width) * static_cast<std::size_t>(Height) * 4>
+        pixels{};
 
-    const int bevel_size = 2;
-    const int corner_radius = 8;
+    constexpr int bevel_size = 2;
+    constexpr int corner_radius = 8;
 
-    for (int y = 0; y < height; ++y)
+    for (int y = 0; y < Height; ++y)
     {
-      for (int x = 0; x < width; ++x)
+      for (int x = 0; x < Width; ++x)
       {
-        std::size_t idx = static_cast<std::size_t>((y * width + x) * 4);
+        std::size_t idx = static_cast<std::size_t>((y * Width + x) * 4);
 
         // Check if pixel is in a rounded corner
         bool in_corner = false;
-        float corner_dist = 0.0f;
 
         // Top-left corner
         if (x < corner_radius && y < corner_radius)
         {
           float dx = static_cast<float>(x - corner_radius);
           float dy = static_cast<float>(y - corner_radius);
-          corner_dist = std::sqrt(dx * dx + dy * dy);
+          float corner_dist = constexpr_sqrt(dx * dx + dy * dy);
           if (corner_dist > corner_radius)
           {
             in_corner = true;
           }
         }
         // Top-right corner
-        else if (x >= width - corner_radius && y < corner_radius)
+        else if (x >= Width - corner_radius && y < corner_radius)
         {
-          float dx = static_cast<float>(x - (width - corner_radius - 1));
+          float dx = static_cast<float>(x - (Width - corner_radius - 1));
           float dy = static_cast<float>(y - corner_radius);
-          corner_dist = std::sqrt(dx * dx + dy * dy);
+          float corner_dist = constexpr_sqrt(dx * dx + dy * dy);
           if (corner_dist > corner_radius)
           {
             in_corner = true;
           }
         }
         // Bottom-left corner
-        else if (x < corner_radius && y >= height - corner_radius)
+        else if (x < corner_radius && y >= Height - corner_radius)
         {
           float dx = static_cast<float>(x - corner_radius);
-          float dy = static_cast<float>(y - (height - corner_radius - 1));
-          corner_dist = std::sqrt(dx * dx + dy * dy);
+          float dy = static_cast<float>(y - (Height - corner_radius - 1));
+          float corner_dist = constexpr_sqrt(dx * dx + dy * dy);
           if (corner_dist > corner_radius)
           {
             in_corner = true;
           }
         }
         // Bottom-right corner
-        else if (x >= width - corner_radius && y >= height - corner_radius)
+        else if (x >= Width - corner_radius && y >= Height - corner_radius)
         {
-          float dx = static_cast<float>(x - (width - corner_radius - 1));
-          float dy = static_cast<float>(y - (height - corner_radius - 1));
-          corner_dist = std::sqrt(dx * dx + dy * dy);
+          float dx = static_cast<float>(x - (Width - corner_radius - 1));
+          float dy = static_cast<float>(y - (Height - corner_radius - 1));
+          float corner_dist = constexpr_sqrt(dx * dx + dy * dy);
           if (corner_dist > corner_radius)
           {
             in_corner = true;
@@ -186,9 +224,9 @@ private:
         else
         {
           bool is_top = y < bevel_size;
-          bool is_bottom = y >= height - bevel_size;
+          bool is_bottom = y >= Height - bevel_size;
           bool is_left = x < bevel_size;
-          bool is_right = x >= width - bevel_size;
+          bool is_right = x >= Width - bevel_size;
 
           if (is_top || is_left)
           {
@@ -203,7 +241,7 @@ private:
           else
           {
             float gradient =
-                static_cast<float>(y - bevel_size) / static_cast<float>(height - 2 * bevel_size);
+                static_cast<float>(y - bevel_size) / static_cast<float>(Height - 2 * bevel_size);
             std::uint8_t value = static_cast<std::uint8_t>(140 - gradient * 40);
             r = g = b = value;
             a = 255;
@@ -220,23 +258,27 @@ private:
     return pixels;
   }
 
-  [[nodiscard]] std::vector<std::uint8_t> generate_ball_pixels(int width, int height) const
+  template <int Width, int Height>
+  [[nodiscard]] static constexpr auto generate_ball_pixels()
+      -> std::array<std::uint8_t,
+                    static_cast<std::size_t>(Width) * static_cast<std::size_t>(Height) * 4>
   {
-    std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width * height * 4));
+    std::array<std::uint8_t, static_cast<std::size_t>(Width) * static_cast<std::size_t>(Height) * 4>
+        pixels{};
 
-    const float center_x = width / 2.0f;
-    const float center_y = height / 2.0f;
-    const float radius = std::min(center_x, center_y) - 1.0f;
+    constexpr float center_x = Width / 2.0f;
+    constexpr float center_y = Height / 2.0f;
+    constexpr float radius = constexpr_min(center_x, center_y) - 1.0f;
 
-    for (int y = 0; y < height; ++y)
+    for (int y = 0; y < Height; ++y)
     {
-      for (int x = 0; x < width; ++x)
+      for (int x = 0; x < Width; ++x)
       {
-        std::size_t idx = static_cast<std::size_t>((y * width + x) * 4);
+        std::size_t idx = static_cast<std::size_t>((y * Width + x) * 4);
 
         float dx = static_cast<float>(x) - center_x;
         float dy = static_cast<float>(y) - center_y;
-        float distance = std::sqrt(dx * dx + dy * dy);
+        float distance = constexpr_sqrt(dx * dx + dy * dy);
 
         if (distance <= radius)
         {
@@ -262,21 +304,22 @@ private:
     return pixels;
   }
 
-  [[nodiscard]] std::vector<std::uint8_t> generate_brick_pixels(int width, int height,
-                                                                std::uint8_t base_r,
-                                                                std::uint8_t base_g,
-                                                                std::uint8_t base_b) const
+  template <int Width, int Height, std::uint8_t BaseR, std::uint8_t BaseG, std::uint8_t BaseB>
+  [[nodiscard]] static constexpr auto generate_brick_pixels()
+      -> std::array<std::uint8_t,
+                    static_cast<std::size_t>(Width) * static_cast<std::size_t>(Height) * 4>
   {
-    std::vector<std::uint8_t> pixels(static_cast<std::size_t>(width * height * 4));
+    std::array<std::uint8_t, static_cast<std::size_t>(Width) * static_cast<std::size_t>(Height) * 4>
+        pixels{};
 
-    const int bevel_size = 2;
-    const int corner_radius = 4;
+    constexpr int bevel_size = 2;
+    constexpr int corner_radius = 4;
 
-    for (int y = 0; y < height; ++y)
+    for (int y = 0; y < Height; ++y)
     {
-      for (int x = 0; x < width; ++x)
+      for (int x = 0; x < Width; ++x)
       {
-        std::size_t idx = static_cast<std::size_t>((y * width + x) * 4);
+        std::size_t idx = static_cast<std::size_t>((y * Width + x) * 4);
 
         // Check if pixel is in a rounded corner
         bool in_corner = false;
@@ -286,40 +329,40 @@ private:
         {
           float dx = static_cast<float>(x - corner_radius);
           float dy = static_cast<float>(y - corner_radius);
-          float corner_dist = std::sqrt(dx * dx + dy * dy);
+          float corner_dist = constexpr_sqrt(dx * dx + dy * dy);
           if (corner_dist > corner_radius)
           {
             in_corner = true;
           }
         }
         // Top-right corner
-        else if (x >= width - corner_radius && y < corner_radius)
+        else if (x >= Width - corner_radius && y < corner_radius)
         {
-          float dx = static_cast<float>(x - (width - corner_radius - 1));
+          float dx = static_cast<float>(x - (Width - corner_radius - 1));
           float dy = static_cast<float>(y - corner_radius);
-          float corner_dist = std::sqrt(dx * dx + dy * dy);
+          float corner_dist = constexpr_sqrt(dx * dx + dy * dy);
           if (corner_dist > corner_radius)
           {
             in_corner = true;
           }
         }
         // Bottom-left corner
-        else if (x < corner_radius && y >= height - corner_radius)
+        else if (x < corner_radius && y >= Height - corner_radius)
         {
           float dx = static_cast<float>(x - corner_radius);
-          float dy = static_cast<float>(y - (height - corner_radius - 1));
-          float corner_dist = std::sqrt(dx * dx + dy * dy);
+          float dy = static_cast<float>(y - (Height - corner_radius - 1));
+          float corner_dist = constexpr_sqrt(dx * dx + dy * dy);
           if (corner_dist > corner_radius)
           {
             in_corner = true;
           }
         }
         // Bottom-right corner
-        else if (x >= width - corner_radius && y >= height - corner_radius)
+        else if (x >= Width - corner_radius && y >= Height - corner_radius)
         {
-          float dx = static_cast<float>(x - (width - corner_radius - 1));
-          float dy = static_cast<float>(y - (height - corner_radius - 1));
-          float corner_dist = std::sqrt(dx * dx + dy * dy);
+          float dx = static_cast<float>(x - (Width - corner_radius - 1));
+          float dy = static_cast<float>(y - (Height - corner_radius - 1));
+          float corner_dist = constexpr_sqrt(dx * dx + dy * dy);
           if (corner_dist > corner_radius)
           {
             in_corner = true;
@@ -336,32 +379,32 @@ private:
         else
         {
           bool is_top = y < bevel_size;
-          bool is_bottom = y >= height - bevel_size;
+          bool is_bottom = y >= Height - bevel_size;
           bool is_left = x < bevel_size;
-          bool is_right = x >= width - bevel_size;
+          bool is_right = x >= Width - bevel_size;
 
           // Lighten for top/left (highlight)
           if (is_top || is_left)
           {
-            r = static_cast<std::uint8_t>(std::min(255, static_cast<int>(base_r * 1.3f)));
-            g = static_cast<std::uint8_t>(std::min(255, static_cast<int>(base_g * 1.3f)));
-            b = static_cast<std::uint8_t>(std::min(255, static_cast<int>(base_b * 1.3f)));
+            r = static_cast<std::uint8_t>(constexpr_min_int(255, static_cast<int>(BaseR * 1.3f)));
+            g = static_cast<std::uint8_t>(constexpr_min_int(255, static_cast<int>(BaseG * 1.3f)));
+            b = static_cast<std::uint8_t>(constexpr_min_int(255, static_cast<int>(BaseB * 1.3f)));
             a = 255;
           }
           // Darken for bottom/right (shadow)
           else if (is_bottom || is_right)
           {
-            r = static_cast<std::uint8_t>(base_r * 0.6f);
-            g = static_cast<std::uint8_t>(base_g * 0.6f);
-            b = static_cast<std::uint8_t>(base_b * 0.6f);
+            r = static_cast<std::uint8_t>(BaseR * 0.6f);
+            g = static_cast<std::uint8_t>(BaseG * 0.6f);
+            b = static_cast<std::uint8_t>(BaseB * 0.6f);
             a = 255;
           }
           // Base color for center
           else
           {
-            r = base_r;
-            g = base_g;
-            b = base_b;
+            r = BaseR;
+            g = BaseG;
+            b = BaseB;
             a = 255;
           }
         }

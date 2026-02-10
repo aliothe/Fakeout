@@ -2,6 +2,7 @@
 add_executable(breakout
     main.cpp
     sdl_window.cpp
+    level.cpp
 )
 
 # Include directories

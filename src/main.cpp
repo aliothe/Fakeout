@@ -1,6 +1,8 @@
 #include "ecs/component.hpp"
 #include "ecs/registry.hpp"
 #include "game_constants.hpp"
+#include "level.hpp"
+#include "score_manager.hpp"
 #include "sdl_window.hpp"
 #include "sound_manager.hpp"
 #include "systems/ball_physics_system.hpp"
@@ -8,6 +10,7 @@
 #include "systems/movement_system.hpp"
 #include "systems/particle_system.hpp"
 #include "systems/render_system.hpp"
+#include "systems/score_render_system.hpp"
 #include "texture_manager.hpp"
 #include <SDL3/SDL.h>
 #include <array>
@@ -18,7 +21,7 @@
 
 namespace
 {
-using breakout::BrickType;
+using breakout::GameTextures;
 using breakout::ecs::BallComponent;
 using breakout::ecs::BrickColor;
 using breakout::ecs::BrickComponent;
@@ -30,12 +33,9 @@ using breakout::ecs::SpriteComponent;
 using breakout::ecs::TransformComponent;
 using breakout::ecs::VelocityComponent;
 
-Entity create_paddle(Registry &registry, breakout::TextureManager &texture_manager)
+Entity create_paddle(Registry &registry, SDL_Texture *texture)
 {
   auto paddle = registry.create_entity();
-
-  SDL_Texture *texture = texture_manager.create_paddle_texture(breakout::PADDLE_TEXTURE_WIDTH,
-                                                               breakout::PADDLE_TEXTURE_HEIGHT);
 
   registry.add_component<TransformComponent>(
       paddle, TransformComponent{{breakout::PADDLE_CENTER_X, breakout::PADDLE_CENTER_Y},
@@ -54,12 +54,9 @@ Entity create_paddle(Registry &registry, breakout::TextureManager &texture_manag
   return paddle;
 }
 
-Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager)
+Entity create_ball(Registry &registry, SDL_Texture *texture)
 {
   auto ball = registry.create_entity();
-
-  SDL_Texture *texture =
-      texture_manager.create_ball_texture(breakout::BALL_TEXTURE_SIZE, breakout::BALL_TEXTURE_SIZE);
 
   // Start ball in center, moving down at an angle
   registry.add_component<TransformComponent>(
@@ -78,87 +75,6 @@ Entity create_ball(Registry &registry, breakout::TextureManager &texture_manager
   registry.add_component<BallComponent>(ball, BallComponent{});
 
   return ball;
-}
-
-void create_brick_wall(Registry &registry, breakout::TextureManager &texture_manager)
-{
-  // Pre-generate textures for each brick type
-  SDL_Texture *red_texture = texture_manager.create_brick_texture(
-      breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_RED_R,
-      breakout::BRICK_RED_G, breakout::BRICK_RED_B);
-  SDL_Texture *yellow_texture = texture_manager.create_brick_texture(
-      breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_YELLOW_R,
-      breakout::BRICK_YELLOW_G, breakout::BRICK_YELLOW_B);
-  SDL_Texture *blue_texture = texture_manager.create_brick_texture(
-      breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_BLUE_R,
-      breakout::BRICK_BLUE_G, breakout::BRICK_BLUE_B);
-
-  // Calculate total width and starting X position to center the wall
-  float total_width = breakout::BRICK_COLS_F * breakout::BRICK_WIDTH;
-  float start_x = (breakout::WINDOW_WIDTH_F - total_width) / breakout::CENTER_DIVISOR;
-
-  // Random number generation with weighted distribution using std::discrete_distribution
-  // Weights: Empty=4, Red=1, Yellow=2, Blue=3
-  // Probabilities: Empty=40%, Red=10%, Yellow=20%, Blue=30%
-  std::random_device rd;
-  std::mt19937 rng(rd());
-  std::discrete_distribution<int> brick_dist{
-      breakout::BRICK_WEIGHT_EMPTY, breakout::BRICK_WEIGHT_RED, breakout::BRICK_WEIGHT_YELLOW,
-      breakout::BRICK_WEIGHT_BLUE};
-
-  for (int row = 0; row < breakout::BRICK_ROWS; ++row)
-  {
-    for (int col = 0; col < breakout::BRICK_COLS; ++col)
-    {
-      // Randomly decide brick type using weighted distribution
-      auto brick_type = static_cast<BrickType>(brick_dist(rng));
-
-      // Empty cell check (40% probability), skip creating a brick
-      if (brick_type == BrickType::Empty)
-      {
-        continue;
-      }
-
-      auto brick = registry.create_entity();
-
-      float x = start_x + static_cast<float>(col) * breakout::BRICK_WIDTH;
-      float y = breakout::BRICK_WALL_TOP_OFFSET + static_cast<float>(row) * breakout::BRICK_HEIGHT;
-
-      registry.add_component<TransformComponent>(
-          brick, TransformComponent{{x, y}, breakout::BRICK_WIDTH, breakout::BRICK_HEIGHT});
-
-      // Determine brick properties based on weighted random selection
-      int hit_points = 0;
-      SDL_Texture *texture = nullptr;
-      BrickColor color = BrickColor::BLUE;
-
-      if (brick_type == BrickType::Red)
-      {
-        // Red bricks (3 hits) - 10% probability
-        hit_points = 3;
-        texture = red_texture;
-        color = BrickColor::RED;
-      }
-      else if (brick_type == BrickType::Yellow)
-      {
-        // Yellow bricks (2 hits) - 20% probability
-        hit_points = 2;
-        texture = yellow_texture;
-        color = BrickColor::YELLOW;
-      }
-      else
-      {
-        // Blue bricks (1 hit) - 30% probability
-        hit_points = 1;
-        texture = blue_texture;
-        color = BrickColor::BLUE;
-      }
-
-      registry.add_component<SpriteComponent>(
-          brick, SpriteComponent{texture, breakout::DEFAULT_TINT_VEC4});
-      registry.add_component<BrickComponent>(brick, BrickComponent{hit_points, color});
-    }
-  }
 }
 } // namespace
 
@@ -186,18 +102,42 @@ int main()
       std::cerr << "Warning: Failed to enable vsync: " << SDL_GetError() << '\n';
     }
 
-    Registry registry;
+    // Create all game textures once at startup
+    // Pixel data is generated at compile time via constexpr functions
     breakout::TextureManager texture_manager(renderer);
+    GameTextures textures{
+        texture_manager.create_paddle_texture<breakout::PADDLE_TEXTURE_WIDTH,
+                                              breakout::PADDLE_TEXTURE_HEIGHT>(),
+        texture_manager
+            .create_ball_texture<breakout::BALL_TEXTURE_SIZE, breakout::BALL_TEXTURE_SIZE>(),
+        texture_manager.create_brick_texture<breakout::BRICK_TEXTURE_WIDTH,
+                                             breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_RED_R,
+                                             breakout::BRICK_RED_G, breakout::BRICK_RED_B>(),
+        texture_manager.create_brick_texture<
+            breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_YELLOW_R,
+            breakout::BRICK_YELLOW_G, breakout::BRICK_YELLOW_B>(),
+        texture_manager.create_brick_texture<breakout::BRICK_TEXTURE_WIDTH,
+                                             breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_BLUE_R,
+                                             breakout::BRICK_BLUE_G, breakout::BRICK_BLUE_B>()};
+
+    Registry registry;
     breakout::SoundManager sound_manager;
+    breakout::ScoreManager score_manager;
     breakout::systems::ParticleSystem particle_system;
-    breakout::systems::BallPhysicsSystem ball_physics_system(sound_manager, particle_system);
+    breakout::systems::BallPhysicsSystem ball_physics_system(sound_manager, particle_system,
+                                                             score_manager);
     breakout::systems::InputSystem input_system;
     breakout::systems::MovementSystem movement_system;
     breakout::systems::RenderSystem render_system(renderer);
+    breakout::systems::ScoreRenderSystem score_render_system(renderer);
 
-    create_paddle(registry, texture_manager);
-    create_ball(registry, texture_manager);
-    create_brick_wall(registry, texture_manager);
+    // Create game entities - textures are passed in, not recreated
+    create_paddle(registry, textures.paddle);
+    create_ball(registry, textures.ball);
+
+    // Create level with randomized layout
+    breakout::Level level(registry, textures);
+    level.generate();
 
     auto last_time = std::chrono::steady_clock::now();
 
@@ -214,6 +154,14 @@ int main()
                                  breakout::WINDOW_HEIGHT_F);
       particle_system.update(registry, delta_time);
 
+      // Check for level completion
+      if (score_manager.is_level_complete(registry))
+      {
+        // Generate new level
+        level.generate();
+        std::cout << "New level generated! Score: " << score_manager.current_score() << "\n";
+      }
+
       // Clear screen with background color
       SDL_SetRenderDrawColor(renderer, breakout::CLEAR_COLOR_SDL.r, breakout::CLEAR_COLOR_SDL.g,
                              breakout::CLEAR_COLOR_SDL.b, breakout::CLEAR_COLOR_SDL.a);
@@ -221,10 +169,14 @@ int main()
 
       render_system.render(registry);
 
+      // Render score on top
+      score_render_system.render(score_manager);
+
       window.present();
     }
 
-    std::cout << "Window closed successfully.\n";
+    std::cout << "Window closed successfully. Final score: " << score_manager.current_score()
+              << "\n";
     return EXIT_SUCCESS;
   }
   catch (const std::exception &e)

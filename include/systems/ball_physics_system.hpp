@@ -3,6 +3,7 @@
 #include "ecs/component.hpp"
 #include "ecs/registry.hpp"
 #include "particle_system.hpp"
+#include "score_manager.hpp"
 #include "sound_manager.hpp"
 #include <cmath>
 
@@ -12,8 +13,10 @@ namespace breakout::systems
 class BallPhysicsSystem
 {
 public:
-  BallPhysicsSystem(SoundManager &sound_manager, ParticleSystem &particle_system)
-      : sound_manager_(sound_manager), particle_system_(particle_system)
+  BallPhysicsSystem(SoundManager &sound_manager, ParticleSystem &particle_system,
+                    ScoreManager &score_manager)
+      : sound_manager_(sound_manager), particle_system_(particle_system),
+        score_manager_(score_manager)
   {
   }
 
@@ -189,27 +192,33 @@ private:
         // Destroy brick if hit points depleted
         if (brick_component->hit_points <= 0)
         {
+          // Add score based on brick type (hit points = score)
+          int points = 0;
+          switch (brick_component->color)
+          {
+          case ecs::BrickColor::RED:
+            points = 3;
+            sound_manager_.play_brick_break_red();
+            break;
+          case ecs::BrickColor::YELLOW:
+            points = 2;
+            sound_manager_.play_brick_break_yellow();
+            break;
+          case ecs::BrickColor::BLUE:
+            points = 1;
+            sound_manager_.play_brick_break_blue();
+            break;
+          default:
+            points = 1;
+            sound_manager_.play_ping();
+            break;
+          }
+          score_manager_.add_score(points);
+
           // Spawn destruction effects
           particle_system_.spawn_destruction_effects(
               registry, *brick_transform, brick_component->color, ball_transform.position.x,
               ball_transform.position.y);
-
-          // Play brick-specific breaking sound
-          switch (brick_component->color)
-          {
-          case ecs::BrickColor::RED:
-            sound_manager_.play_brick_break_red();
-            break;
-          case ecs::BrickColor::YELLOW:
-            sound_manager_.play_brick_break_yellow();
-            break;
-          case ecs::BrickColor::BLUE:
-            sound_manager_.play_brick_break_blue();
-            break;
-          default:
-            sound_manager_.play_ping();
-            break;
-          }
 
           registry.destroy_entity(brick);
         }
@@ -280,6 +289,7 @@ private:
 
   SoundManager &sound_manager_;
   ParticleSystem &particle_system_;
+  ScoreManager &score_manager_;
 };
 
 } // namespace breakout::systems
