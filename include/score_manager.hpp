@@ -13,7 +13,7 @@ class ScoreManager
 public:
   void add_score(int points)
   {
-    current_score_ += points;
+    current_score_ += points * 10;
     if (current_score_ > high_score_)
     {
       high_score_ = current_score_;
