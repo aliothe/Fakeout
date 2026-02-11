@@ -32,7 +32,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-lib
 # clang-tidy Integration (mandatory fixes)
 set(CMAKE_CXX_CLANG_TIDY
     clang-tidy;
-    -checks='modernize-*,cppcoreguidelines-*,performance-*,bugprone-*,readability-*';
+    -checks=modernize-*,cppcoreguidelines-*,performance-*,bugprone-*,readability-*;
     -warnings-as-errors=*
 )
 

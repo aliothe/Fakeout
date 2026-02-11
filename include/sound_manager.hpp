@@ -3,6 +3,7 @@
 #include <SDL3/SDL.h>
 #include <cmath>
 #include <memory>
+#include <numbers>
 #include <random>
 #include <stdexcept>
 #include <vector>
@@ -50,7 +51,10 @@ public:
   SoundManager(const SoundManager &) = delete;
   SoundManager &operator=(const SoundManager &) = delete;
   SoundManager(SoundManager &&other) noexcept
-      : stream_(other.stream_), ping_sound_(std::move(other.ping_sound_))
+      : stream_(other.stream_), ping_sound_(std::move(other.ping_sound_)),
+        red_break_sound_(std::move(other.red_break_sound_)),
+        yellow_break_sound_(std::move(other.yellow_break_sound_)),
+        blue_break_sound_(std::move(other.blue_break_sound_))
   {
     other.stream_ = nullptr;
   }
@@ -65,6 +69,9 @@ public:
       }
       stream_ = other.stream_;
       ping_sound_ = std::move(other.ping_sound_);
+      red_break_sound_ = std::move(other.red_break_sound_);
+      yellow_break_sound_ = std::move(other.yellow_break_sound_);
+      blue_break_sound_ = std::move(other.blue_break_sound_);
       other.stream_ = nullptr;
     }
     return *this;
@@ -137,10 +144,10 @@ private:
     {
       float t = static_cast<float>(i) / static_cast<float>(sample_rate);
       float envelope = std::exp(-decay_rate * t);
-      float sample = std::sin(2.0f * 3.14159f * frequency * t) * envelope;
+      float sample = std::sin(2.0f * std::numbers::pi_v<float> * frequency * t) * envelope;
 
       // Add a higher harmonic for more "metallic" quality
-      sample += 0.3f * std::sin(2.0f * 3.14159f * frequency * 2.5f * t) * envelope;
+      sample += 0.3f * std::sin(2.0f * std::numbers::pi_v<float> * frequency * 2.5f * t) * envelope;
 
       constexpr float max_amplitude = 0.5f;
       std::int16_t sample_int = static_cast<std::int16_t>(sample * max_amplitude * 32767.0f);
@@ -159,7 +166,7 @@ private:
     sound.reserve(num_samples);
 
     // Random number generator for noise
-    std::mt19937 rng(12345);
+    std::mt19937 rng(std::random_device{}());
     std::uniform_real_distribution<float> noise_dist(-1.0f, 1.0f);
 
     for (std::size_t i = 0; i < num_samples; ++i)
@@ -171,13 +178,13 @@ private:
 
       // Main tone
       float envelope = std::exp(-10.0f * t);
-      float sample = std::sin(2.0f * 3.14159f * freq * t) * envelope;
+      float sample = std::sin(2.0f * std::numbers::pi_v<float> * freq * t) * envelope;
 
       // Add noise for crunch effect
       sample += noise_dist(rng) * noise_amount * envelope;
 
       // Add second harmonic for body
-      sample += 0.5f * std::sin(2.0f * 3.14159f * freq * 2.0f * t) * envelope;
+      sample += 0.5f * std::sin(2.0f * std::numbers::pi_v<float> * freq * 2.0f * t) * envelope;
 
       constexpr float max_amplitude = 0.6f;
       std::int16_t sample_int = static_cast<std::int16_t>(sample * max_amplitude * 32767.0f);

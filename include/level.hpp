@@ -70,9 +70,17 @@ public:
   }
 
 private:
+  struct BrickProperties
+  {
+    int hit_points;
+    SDL_Texture *texture;
+    ecs::BrickColor color;
+  };
+
   void generate_rectangular();
   void generate_circular();
-  void create_brick(float x, float y, SDL_Texture *texture, ecs::BrickColor color, int hit_points);
+  [[nodiscard]] BrickProperties resolve_brick_type(BrickType type) const;
+  void create_brick(float pos_x, float pos_y, SDL_Texture *texture, ecs::BrickColor color, int hit_points);
 
   ecs::Registry &registry_;
   const GameTextures &textures_;

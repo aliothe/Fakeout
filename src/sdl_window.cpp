@@ -9,7 +9,7 @@ SDL::SDL(Uint32 flags)
   {
     const char *error = SDL_GetError();
     std::cerr << "SDL Initialization Failed!\n";
-    std::cerr << "SDL Error: " << (error ? error : "Unknown error") << '\n';
+    std::cerr << "SDL Error: " << (error != nullptr ? error : "Unknown error") << '\n';
     std::cerr << "SDL Version: " << SDL_GetRevision() << '\n';
     std::cerr << "Available Video Drivers:\n";
     for (int i = 0; i < SDL_GetNumVideoDrivers(); ++i)
@@ -18,7 +18,7 @@ SDL::SDL(Uint32 flags)
     }
     std::cerr << "SDL_Init flags: " << flags << "\n";
     throw std::runtime_error("SDL initialization failed: " +
-                             std::string(error ? error : "Unknown error"));
+                             std::string(error != nullptr ? error : "Unknown error"));
   }
   initialized_ = true;
 }
@@ -33,7 +33,7 @@ SDL::SDL(SDL &&other) noexcept : initialized_(other.initialized_)
   other.initialized_ = false;
 }
 
-SDL &SDL::operator=(SDL &&other) noexcept
+auto SDL::operator=(SDL &&other) noexcept -> SDL &
 {
   if (this != &other)
   {
@@ -55,17 +55,16 @@ void SDL::cleanup() noexcept
 
 // SDLWindow class implementation
 SDLWindow::SDLWindow(std::string_view title, int width, int height)
+    : window_(SDL_CreateWindow(std::string(title).c_str(), width, height, 0))
 {
-  window_ = SDL_CreateWindow(std::string(title).c_str(), width, height, 0);
-
-  if (!window_)
+  if (window_ == nullptr)
   {
     std::cerr << "Window creation failed!\n";
     throw std::runtime_error("Failed to create SDL window: " + std::string(SDL_GetError()));
   }
 
   renderer_ = SDL_CreateRenderer(window_, nullptr);
-  if (!renderer_)
+  if (renderer_ == nullptr)
   {
     SDL_DestroyWindow(window_);
     window_ = nullptr;
@@ -86,7 +85,7 @@ SDLWindow::SDLWindow(SDLWindow &&other) noexcept
   other.should_close_ = false;
 }
 
-SDLWindow &SDLWindow::operator=(SDLWindow &&other) noexcept
+auto SDLWindow::operator=(SDLWindow &&other) noexcept -> SDLWindow &
 {
   if (this != &other)
   {
@@ -103,12 +102,12 @@ SDLWindow &SDLWindow::operator=(SDLWindow &&other) noexcept
 
 void SDLWindow::cleanup() noexcept
 {
-  if (renderer_)
+  if (renderer_ != nullptr)
   {
     SDL_DestroyRenderer(renderer_);
     renderer_ = nullptr;
   }
-  if (window_)
+  if (window_ != nullptr)
   {
     SDL_DestroyWindow(window_);
     window_ = nullptr;
@@ -117,13 +116,13 @@ void SDLWindow::cleanup() noexcept
 
 void SDLWindow::present() const
 {
-  if (renderer_)
+  if (renderer_ != nullptr)
   {
     SDL_RenderPresent(renderer_);
   }
 }
 
-bool SDLWindow::should_close() const
+auto SDLWindow::should_close() const -> bool
 {
   return should_close_;
 }
@@ -150,7 +149,7 @@ void SDLWindow::handle_events()
   }
 }
 
-SDL_Renderer *SDLWindow::get_renderer() const
+auto SDLWindow::get_renderer() const -> SDL_Renderer *
 {
   return renderer_;
 }

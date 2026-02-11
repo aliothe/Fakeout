@@ -37,12 +37,8 @@ namespace breakout
   return guess;
 }
 
-[[nodiscard]] static constexpr float constexpr_min(float a, float b)
-{
-  return (a < b) ? a : b;
-}
-
-[[nodiscard]] static constexpr int constexpr_min_int(int a, int b)
+template <typename T>
+[[nodiscard]] static constexpr T constexpr_min(T a, T b)
 {
   return (a < b) ? a : b;
 }
@@ -386,9 +382,9 @@ private:
           // Lighten for top/left (highlight)
           if (is_top || is_left)
           {
-            r = static_cast<std::uint8_t>(constexpr_min_int(255, static_cast<int>(BaseR * 1.3f)));
-            g = static_cast<std::uint8_t>(constexpr_min_int(255, static_cast<int>(BaseG * 1.3f)));
-            b = static_cast<std::uint8_t>(constexpr_min_int(255, static_cast<int>(BaseB * 1.3f)));
+            r = static_cast<std::uint8_t>(constexpr_min(255, static_cast<int>(BaseR * 1.3f)));
+            g = static_cast<std::uint8_t>(constexpr_min(255, static_cast<int>(BaseG * 1.3f)));
+            b = static_cast<std::uint8_t>(constexpr_min(255, static_cast<int>(BaseB * 1.3f)));
             a = 255;
           }
           // Darken for bottom/right (shadow)

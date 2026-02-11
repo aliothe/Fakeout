@@ -2,10 +2,12 @@
 
 #include "ecs/component.hpp"
 #include "ecs/registry.hpp"
+#include "game_constants.hpp"
 #include "particle_system.hpp"
 #include "score_manager.hpp"
 #include "sound_manager.hpp"
 #include <cmath>
+#include <numbers>
 
 namespace breakout::systems
 {
@@ -147,7 +149,7 @@ private:
 
     // Calculate new velocity with angle based on hit position
     // Hit center = bounce straight up, hit edge = bounce at angle
-    constexpr float MAX_BOUNCE_ANGLE = 60.0f * 3.14159f / 180.0f; // 60 degrees in radians
+    constexpr float MAX_BOUNCE_ANGLE = 60.0f * std::numbers::pi_v<float> / 180.0f; // 60 degrees in radians
     float bounce_angle = hit_position * MAX_BOUNCE_ANGLE;
 
     // Set new velocity
@@ -273,7 +275,6 @@ private:
     float min_overlap = std::min({overlap_left, overlap_right, overlap_top, overlap_bottom});
 
     // Use tolerance-based comparison for floating point
-    constexpr float EPSILON = 0.001F;
     if (std::abs(min_overlap - overlap_left) < EPSILON ||
         std::abs(min_overlap - overlap_right) < EPSILON)
     {

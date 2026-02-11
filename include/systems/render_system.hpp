@@ -14,7 +14,7 @@ public:
   {
   }
 
-  void render(ecs::Registry &registry) const
+  void render(const ecs::Registry &registry) const
   {
     // First, render textured entities (bricks, paddle, ball)
     auto textured_entities = registry.view<ecs::TransformComponent, ecs::SpriteComponent>();
@@ -36,7 +36,7 @@ public:
       }
       else
       {
-        draw_colored_quad(*transform, *sprite, registry, entity);
+        draw_colored_quad(*transform, *sprite);
       }
     }
   }
@@ -62,37 +62,19 @@ private:
   }
 
   void draw_colored_quad(const ecs::TransformComponent &transform,
-                         const ecs::SpriteComponent &sprite, ecs::Registry &registry,
-                         ecs::Entity entity) const
+                         const ecs::SpriteComponent &sprite) const
   {
     const float half_width = transform.width / 2.0f;
     const float half_height = transform.height / 2.0f;
 
-    // Set draw color from tint
     SDL_SetRenderDrawColor(renderer_, static_cast<std::uint8_t>(sprite.tint.r * 255.0F),
                            static_cast<std::uint8_t>(sprite.tint.g * 255.0F),
                            static_cast<std::uint8_t>(sprite.tint.b * 255.0F),
                            static_cast<std::uint8_t>(sprite.tint.a * 255.0F));
 
-    // Check if this is a shard (has rotation)
-    auto *shard = registry.get_component<ecs::ShardComponent>(entity);
-
-    if (shard != nullptr)
-    {
-      // For rotated shards, we use SDL_RenderTextureRotated if we had a texture,
-      // but for colored quads without texture, we just draw a rect (no rotation in SDL2D)
-      // SDL doesn't support rotating filled rectangles directly
-      SDL_FRect rect = {transform.position.x - half_width, transform.position.y - half_height,
-                        transform.width, transform.height};
-      SDL_RenderFillRect(renderer_, &rect);
-    }
-    else
-    {
-      // Regular colored quad for particles
-      SDL_FRect rect = {transform.position.x - half_width, transform.position.y - half_height,
-                        transform.width, transform.height};
-      SDL_RenderFillRect(renderer_, &rect);
-    }
+    SDL_FRect rect = {transform.position.x - half_width, transform.position.y - half_height,
+                      transform.width, transform.height};
+    SDL_RenderFillRect(renderer_, &rect);
   }
 
   SDL_Renderer *renderer_{nullptr};

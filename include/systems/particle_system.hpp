@@ -2,7 +2,9 @@
 
 #include "ecs/component.hpp"
 #include "ecs/registry.hpp"
+#include "game_constants.hpp"
 #include <cmath>
+#include <numbers>
 #include <random>
 
 namespace breakout::systems
@@ -36,7 +38,7 @@ private:
   {
     std::uniform_int_distribution<int> shard_count_dist(6, 12);
     std::uniform_real_distribution<float> scale_dist(0.2f, 0.5f);
-    std::uniform_real_distribution<float> angle_dist(0.0f, 2.0f * 3.14159f);
+    std::uniform_real_distribution<float> angle_dist(0.0f, 2.0f * std::numbers::pi_v<float>);
     std::uniform_real_distribution<float> speed_dist(50.0f, 150.0f);
     std::uniform_real_distribution<float> rot_speed_dist(-5.0f, 5.0f);
 
@@ -49,10 +51,15 @@ private:
     for (int i = 0; i < num_shards; ++i)
     {
       auto shard = registry.create_entity();
+      if (shard == ecs::INVALID_ENTITY)
+      {
+        return;
+      }
 
       // Random position near brick center
-      float offset_x = (std::rand() % 20 - 10) / 10.0f * brick_transform.width * 0.3f;
-      float offset_y = (std::rand() % 20 - 10) / 10.0f * brick_transform.height * 0.3f;
+      std::uniform_real_distribution<float> offset_dist(-1.0f, 1.0f);
+      float offset_x = offset_dist(rng_) * brick_transform.width * 0.3f;
+      float offset_y = offset_dist(rng_) * brick_transform.height * 0.3f;
 
       float scale = scale_dist(rng_);
       float angle = angle_dist(rng_);
@@ -77,7 +84,7 @@ private:
           ecs::ShardComponent{SHARD_LIFETIME, SHARD_LIFETIME, 0.0f, rot_speed_dist(rng_), scale});
 
       // Add sprite with brick color - no texture, just colored rectangle
-      registry.add_component<ecs::SpriteComponent>(shard, ecs::SpriteComponent{0, {r, g, b, 1.0f}});
+      registry.add_component<ecs::SpriteComponent>(shard, ecs::SpriteComponent{nullptr, {r, g, b, 1.0f}});
     }
   }
 
@@ -103,6 +110,10 @@ private:
     for (int i = 0; i < num_particles; ++i)
     {
       auto particle = registry.create_entity();
+      if (particle == ecs::INVALID_ENTITY)
+      {
+        return;
+      }
 
       // Cone emission toward impact direction
       float angle = impact_angle + angle_spread_dist(rng_);
@@ -125,7 +136,7 @@ private:
 
       // Add sprite with brick color
       registry.add_component<ecs::SpriteComponent>(particle,
-                                                   ecs::SpriteComponent{0, {r, g, b, 1.0f}});
+                                                   ecs::SpriteComponent{nullptr, {r, g, b, 1.0f}});
     }
   }
 
@@ -207,24 +218,24 @@ private:
     }
   }
 
-  void get_color_values(ecs::BrickColor color, float &r, float &g, float &b)
+  static void get_color_values(ecs::BrickColor color, float &r, float &g, float &b)
   {
     switch (color)
     {
     case ecs::BrickColor::RED:
-      r = 0.86f;
-      g = 0.2f;
-      b = 0.2f;
+      r = PARTICLE_RED_R;
+      g = PARTICLE_RED_G;
+      b = PARTICLE_RED_B;
       break;
     case ecs::BrickColor::YELLOW:
-      r = 0.86f;
-      g = 0.78f;
-      b = 0.2f;
+      r = PARTICLE_YELLOW_R;
+      g = PARTICLE_YELLOW_G;
+      b = PARTICLE_YELLOW_B;
       break;
     case ecs::BrickColor::BLUE:
-      r = 0.2f;
-      g = 0.39f;
-      b = 0.86f;
+      r = PARTICLE_BLUE_R;
+      g = PARTICLE_BLUE_G;
+      b = PARTICLE_BLUE_B;
       break;
     default:
       r = g = b = 1.0f;

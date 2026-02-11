@@ -109,6 +109,19 @@ constexpr std::array<float, 2> ZERO_VELOCITY{0.0F, 0.0F};
 // Centering divisor for positioning calculations
 constexpr float CENTER_DIVISOR = 2.0F;
 
+// Particle color values (normalized 0.0-1.0 for each brick color)
+constexpr float PARTICLE_RED_R = 0.86F;
+constexpr float PARTICLE_RED_G = 0.2F;
+constexpr float PARTICLE_RED_B = 0.2F;
+
+constexpr float PARTICLE_YELLOW_R = 0.86F;
+constexpr float PARTICLE_YELLOW_G = 0.78F;
+constexpr float PARTICLE_YELLOW_B = 0.2F;
+
+constexpr float PARTICLE_BLUE_R = 0.2F;
+constexpr float PARTICLE_BLUE_G = 0.39F;
+constexpr float PARTICLE_BLUE_B = 0.86F;
+
 } // namespace constants
 
 } // namespace breakout

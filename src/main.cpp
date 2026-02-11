@@ -33,20 +33,24 @@ using breakout::ecs::SpriteComponent;
 using breakout::ecs::TransformComponent;
 using breakout::ecs::VelocityComponent;
 
-Entity create_paddle(Registry &registry, SDL_Texture *texture)
+auto create_paddle(Registry &registry, SDL_Texture *texture) -> Entity
 {
   auto paddle = registry.create_entity();
+  if (paddle == breakout::ecs::INVALID_ENTITY)
+  {
+    return paddle;
+  }
 
   registry.add_component<TransformComponent>(
-      paddle, TransformComponent{{breakout::PADDLE_CENTER_X, breakout::PADDLE_CENTER_Y},
-                                 breakout::PADDLE_WIDTH,
-                                 breakout::PADDLE_HEIGHT});
+      paddle, TransformComponent{.position = {.x = breakout::PADDLE_CENTER_X, .y = breakout::PADDLE_CENTER_Y},
+                                 .width = breakout::PADDLE_WIDTH,
+                                 .height = breakout::PADDLE_HEIGHT});
 
   registry.add_component<SpriteComponent>(paddle,
-                                          SpriteComponent{texture, breakout::DEFAULT_TINT_VEC4});
+                                          SpriteComponent{.texture = texture, .tint = breakout::DEFAULT_TINT_VEC4});
 
   registry.add_component<VelocityComponent>(
-      paddle, VelocityComponent{{breakout::ZERO_VELOCITY[0], breakout::ZERO_VELOCITY[1]}});
+      paddle, VelocityComponent{{.x = breakout::ZERO_VELOCITY[0], .y = breakout::ZERO_VELOCITY[1]}});
 
   registry.add_component<PaddleComponent>(paddle, PaddleComponent{});
   registry.add_component<PlayerControllerComponent>(paddle, PlayerControllerComponent{});
@@ -54,23 +58,27 @@ Entity create_paddle(Registry &registry, SDL_Texture *texture)
   return paddle;
 }
 
-Entity create_ball(Registry &registry, SDL_Texture *texture)
+auto create_ball(Registry &registry, SDL_Texture *texture) -> Entity
 {
   auto ball = registry.create_entity();
+  if (ball == breakout::ecs::INVALID_ENTITY)
+  {
+    return ball;
+  }
 
   // Start ball in center, moving down at an angle
   registry.add_component<TransformComponent>(
-      ball, TransformComponent{{breakout::BALL_CENTER_X, breakout::BALL_CENTER_Y},
-                               breakout::BALL_SIZE,
-                               breakout::BALL_SIZE});
+      ball, TransformComponent{.position = {.x = breakout::BALL_CENTER_X, .y = breakout::BALL_CENTER_Y},
+                               .width = breakout::BALL_SIZE,
+                               .height = breakout::BALL_SIZE});
 
   registry.add_component<SpriteComponent>(ball,
-                                          SpriteComponent{texture, breakout::DEFAULT_TINT_VEC4});
+                                          SpriteComponent{.texture = texture, .tint = breakout::DEFAULT_TINT_VEC4});
 
   // Initial velocity: moving down and to the right
   registry.add_component<VelocityComponent>(
       ball,
-      VelocityComponent{{breakout::BALL_INITIAL_VELOCITY_X, breakout::BALL_INITIAL_VELOCITY_Y}});
+      VelocityComponent{{.x = breakout::BALL_INITIAL_VELOCITY_X, .y = breakout::BALL_INITIAL_VELOCITY_Y}});
 
   registry.add_component<BallComponent>(ball, BallComponent{});
 
@@ -78,7 +86,7 @@ Entity create_ball(Registry &registry, SDL_Texture *texture)
 }
 } // namespace
 
-int main()
+auto main() -> int
 {
   try
   {
@@ -106,19 +114,19 @@ int main()
     // Pixel data is generated at compile time via constexpr functions
     breakout::TextureManager texture_manager(renderer);
     GameTextures textures{
-        texture_manager.create_paddle_texture<breakout::PADDLE_TEXTURE_WIDTH,
-                                              breakout::PADDLE_TEXTURE_HEIGHT>(),
-        texture_manager
-            .create_ball_texture<breakout::BALL_TEXTURE_SIZE, breakout::BALL_TEXTURE_SIZE>(),
-        texture_manager.create_brick_texture<breakout::BRICK_TEXTURE_WIDTH,
-                                             breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_RED_R,
-                                             breakout::BRICK_RED_G, breakout::BRICK_RED_B>(),
-        texture_manager.create_brick_texture<
+        .paddle = texture_manager.create_paddle_texture<breakout::PADDLE_TEXTURE_WIDTH,
+                                                        breakout::PADDLE_TEXTURE_HEIGHT>(),
+        .ball = texture_manager
+                    .create_ball_texture<breakout::BALL_TEXTURE_SIZE, breakout::BALL_TEXTURE_SIZE>(),
+        .brick_red = texture_manager.create_brick_texture<breakout::BRICK_TEXTURE_WIDTH,
+                                                          breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_RED_R,
+                                                          breakout::BRICK_RED_G, breakout::BRICK_RED_B>(),
+        .brick_yellow = texture_manager.create_brick_texture<
             breakout::BRICK_TEXTURE_WIDTH, breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_YELLOW_R,
             breakout::BRICK_YELLOW_G, breakout::BRICK_YELLOW_B>(),
-        texture_manager.create_brick_texture<breakout::BRICK_TEXTURE_WIDTH,
-                                             breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_BLUE_R,
-                                             breakout::BRICK_BLUE_G, breakout::BRICK_BLUE_B>()};
+        .brick_blue = texture_manager.create_brick_texture<breakout::BRICK_TEXTURE_WIDTH,
+                                                           breakout::BRICK_TEXTURE_HEIGHT, breakout::BRICK_BLUE_R,
+                                                           breakout::BRICK_BLUE_G, breakout::BRICK_BLUE_B>()};
 
     Registry registry;
     breakout::SoundManager sound_manager;
@@ -146,6 +154,10 @@ int main()
       auto current_time = std::chrono::steady_clock::now();
       float delta_time = std::chrono::duration<float>(current_time - last_time).count();
       last_time = current_time;
+
+      // Clamp to prevent physics explosions after debugger pauses or system sleeps
+      constexpr float MAX_DELTA_TIME = 1.0F / 20.0F;
+      delta_time = std::min(delta_time, MAX_DELTA_TIME);
 
       window.handle_events();
       input_system.update(registry, delta_time);

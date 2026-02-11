@@ -28,9 +28,8 @@ public:
         for (ecs::Entity entity : entities)
         {
             auto *velocity  = registry.get_component<ecs::VelocityComponent>(entity);
-            //auto *transform = registry.get_component<ecs::TransformComponent>(entity);
 
-            if (!velocity) continue;
+            if (velocity == nullptr) continue;
 
             bool left_pressed  = keyboard_state[SDL_SCANCODE_LEFT]  || keyboard_state[SDL_SCANCODE_A];
             bool right_pressed = keyboard_state[SDL_SCANCODE_RIGHT] || keyboard_state[SDL_SCANCODE_D];

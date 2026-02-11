@@ -2,6 +2,7 @@
 
 #include "ecs/component.hpp"
 #include "ecs/registry.hpp"
+#include <algorithm>
 
 namespace breakout::systems
 {

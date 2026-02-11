@@ -34,7 +34,7 @@ public:
   }
 
   // Check if all bricks are destroyed
-  [[nodiscard]] bool is_level_complete(ecs::Registry &registry) const
+  [[nodiscard]] bool is_level_complete(const ecs::Registry &registry) const
   {
     auto bricks = registry.view<ecs::BrickComponent>();
     return bricks.empty();

@@ -94,7 +94,10 @@ public:
 
   [[nodiscard]] Entity create_entity()
   {
-    assert(!available_entities_.empty() && "Entity limit reached");
+    if (available_entities_.empty())
+    {
+      return INVALID_ENTITY;
+    }
     Entity id = available_entities_.back();
     available_entities_.pop_back();
     alive_entities_[id] = 1;
@@ -116,11 +119,12 @@ public:
 
     alive_entities_[entity] = 0;
 
-    // Remove from living_entities_ list
+    // Remove from living_entities_ list (swap-and-pop for O(1))
     auto it = std::find(living_entities_.begin(), living_entities_.end(), entity);
     if (it != living_entities_.end())
     {
-      living_entities_.erase(it);
+      *it = living_entities_.back();
+      living_entities_.pop_back();
     }
 
     available_entities_.push_back(entity);
